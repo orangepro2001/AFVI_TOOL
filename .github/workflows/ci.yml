@@ -1,0 +1,119 @@
+# CI for AFVI TOOLS. Runs on every push to main and on pull requests.
+#
+#   core            Go: gofmt, vet, race tests (Linux)
+#   core-windows    Go tests on a real Windows runner (case-only renames, UNC-style paths, os.Rename)
+#   gui             C#: build + headless GUI tests against the freshly built core
+#   package-windows cross-builds the Windows app into build/win (Go cross-compile + single-file dotnet publish win-x64)
+#   deploy          PLACEHOLDER, disabled. See deploy/README.md for where delivery plugs in.
+#
+# Nothing here ever touches the machines 192.168.1.61/62/63: tests use temp directories.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - name: gofmt
+        working-directory: core
+        run: test -z "$(gofmt -l .)"
+      - name: vet
+        working-directory: core
+        run: go vet ./...
+      - name: test
+        working-directory: core
+        run: go test -race ./...
+
+  core-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - name: test
+        working-directory: core
+        run: go test ./...
+
+  gui:
+    needs: core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: fonts for the headless renderer
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fontconfig fonts-noto-cjk fonts-dejavu-core
+      - name: build core
+        run: mkdir -p bin && cd core && go build -o ../bin/afvi-core ./cmd/afvi-core
+      - name: build and test GUI
+        run: |
+          dotnet build app/src/AfviTools -c Release
+          AFVI_CORE="$PWD/bin/afvi-core" dotnet test app/tests/AfviTools.Tests
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-screenshots
+          path: shots/*.png
+          if-no-files-found: ignore
+
+  package-windows:
+    needs: [core, core-windows, gui]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: build Windows package
+        run: scripts/build.sh --no-test --platform win
+      - name: zip
+        run: cd build && zip -qr AFVI-TOOLS-win-x64.zip win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AFVI-TOOLS-win-x64
+          path: build/AFVI-TOOLS-win-x64.zip
+
+  # ---- delivery placeholder ------------------------------------------------
+  # Turn this on when the delivery path is decided (release asset, build server,
+  # network share). It only runs for main and needs the package job.
+  deploy:
+    if: ${{ false && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    needs: package-windows
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AFVI-TOOLS-win-x64
+      - name: deliver
+        run: echo "TODO: see deploy/README.md"

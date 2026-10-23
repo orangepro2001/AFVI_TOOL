@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:AfviTools.Localization"
+             xmlns:c="using:AfviTools.Controls"
+             xmlns:vm="using:AfviTools.ViewModels"
+             xmlns:m="using:AfviTools.Models"
+             x:Class="AfviTools.Views.ModelCopyView"
+             x:DataType="vm:MainViewModel">
+  <Grid x:Name="RootGrid" ColumnDefinitions="*,340" Margin="4">
+    <!-- source -->
+    <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,6,0">
+      <c:GroupBox Grid.Row="0" Header="{loc:T gb_source}">
+        <Grid ColumnDefinitions="Auto,Auto,12,Auto,Auto,12,*,Auto" RowDefinitions="Auto" VerticalAlignment="Center">
+          <TextBlock Grid.Column="0" Text="{loc:T lbl_machine}" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <ComboBox Grid.Column="1" Width="150" ItemsSource="{Binding Machines}" SelectedItem="{Binding SelectedMachine}" />
+          <TextBlock Grid.Column="3" Text="{loc:T lbl_node}" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <ComboBox Grid.Column="4" Width="90" ItemsSource="{Binding Nodes}" SelectedItem="{Binding SelectedNode}" />
+          <TextBlock Grid.Column="6" Text="{loc:T lbl_search}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" />
+          <TextBox Grid.Column="6" Margin="40,0,0,0" Text="{Binding SearchText}" Watermark="{loc:T search_hint}" />
+          <Button Grid.Column="7" Content="{loc:T btn_refresh}" MinWidth="75" Margin="8,0,0,0" Command="{Binding RefreshCommand}" />
+        </Grid>
+      </c:GroupBox>
+
+      <DataGrid x:Name="ModelGrid" Grid.Row="1" Margin="0,6,0,0" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
+                AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
+                SelectionMode="Single" GridLinesVisibility="None" HeadersVisibility="Column">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="{loc:T col_model}" Binding="{Binding Name}" Width="*" MinWidth="160" />
+          <DataGridTextColumn Header="{loc:T col_class}" Binding="{Binding Class}" Width="60" Tag="60" />
+          <DataGridTextColumn Header="PxRepository" Binding="{Binding Repository}" Width="112" Tag="112" />
+          <DataGridTextColumn Header=".his" Binding="{Binding History}" Width="50" Tag="50" />
+          <DataGridTextColumn Header="INSPECT_SPEC" Binding="{Binding Inspect}" Width="124" Tag="124" />
+          <DataGridTextColumn Header="LIGHT_SPEC" Binding="{Binding Light}" Width="104" Tag="104" />
+          <DataGridTextColumn Header="{loc:T col_modified}" Binding="{Binding Modified}" Width="154" Tag="154" />
+        </DataGrid.Columns>
+      </DataGrid>
+    </Grid>
+
+    <!-- operations -->
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Spacing="6" Grid.IsSharedSizeScope="True">
+      <c:GroupBox Header="{loc:T gb_copy}">
+        <StackPanel Spacing="6">
+          <TextBlock Text="{Binding SourceLabel}" Classes="dim" />
+          <RadioButton GroupName="copymode" Content="{loc:T rb_single}" IsEnabled="{Binding CanSingleCopy}"
+                       IsChecked="{Binding !CopyAsGroup, Mode=OneWay}" />
+          <Grid Margin="20,0,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="lbl" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Text="{loc:T lbl_target_node}" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding SingleTargets}"
+                      SelectedItem="{Binding SelectedSingleTarget}" IsEnabled="{Binding !CopyAsGroup}" />
+          </Grid>
+          <RadioButton GroupName="copymode" Content="{loc:T rb_group}" IsEnabled="{Binding CanGroupCopy}"
+                       IsChecked="{Binding CopyAsGroup}" />
+          <Grid Margin="20,0,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="lbl" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Text="{loc:T lbl_target_machine}" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding GroupTargets}"
+                      SelectedItem="{Binding SelectedGroupTarget}" IsEnabled="{Binding CopyAsGroup}" />
+          </Grid>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="lbl" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Text="{loc:T lbl_newname_opt}" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding CopyNewName}" Watermark="{loc:T hint_keep_name}" />
+          </Grid>
+          <TextBlock Classes="dim" TextWrapping="Wrap" Text="{loc:T note_copy}" />
+          <Button Content="{loc:T btn_copy}" HorizontalAlignment="Right" MinWidth="90" Command="{Binding CopyCommand}" />
+        </StackPanel>
+      </c:GroupBox>
+
+      <c:GroupBox Header="{loc:T gb_rename}">
+        <StackPanel Spacing="6">
+          <CheckBox Content="{loc:T chk_rename_group}" IsChecked="{Binding RenameAsGroup}" />
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="lbl" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Text="{loc:T lbl_newname}" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding RenameNewName}" />
+          </Grid>
+          <Button Content="{loc:T btn_rename}" HorizontalAlignment="Right" MinWidth="90" Command="{Binding RenameCommand}" />
+        </StackPanel>
+      </c:GroupBox>
+
+      <c:GroupBox Header="{loc:T gb_rules}">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="dim" TextWrapping="Wrap" Text="{loc:T rule_1}" />
+          <TextBlock Classes="dim" TextWrapping="Wrap" Text="{loc:T rule_2}" />
+          <TextBlock Classes="dim" TextWrapping="Wrap" Text="{loc:T rule_3}" />
+          <TextBlock Classes="dim" TextWrapping="Wrap" Text="{loc:T rule_4}" />
+        </StackPanel>
+      </c:GroupBox>
+    </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

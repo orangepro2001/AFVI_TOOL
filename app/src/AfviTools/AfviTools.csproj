@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>AfviTools</AssemblyName>
+    <RootNamespace>AfviTools</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <GenerateEmbeddedFilesManifest>false</GenerateEmbeddedFilesManifest>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Skia" Version="11.3.22" />
+    <PackageReference Include="Classic.Avalonia.Theme" Version="11.3.0.3" />
+    <PackageReference Include="Classic.Avalonia.Theme.DataGrid" Version="11.3.0.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <!-- scripts/build.sh passes /p:EmbeddedCore=<afvi-core for the target platform>; the program then carries its Go core
+       inside and unpacks it on first start. Dev builds leave it unset and use bin/afvi-core. -->
+  <ItemGroup Condition="'$(EmbeddedCore)' != ''">
+    <EmbeddedResource Include="$(EmbeddedCore)" LogicalName="afvi-core.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/lang/*.json" LogicalName="lang.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

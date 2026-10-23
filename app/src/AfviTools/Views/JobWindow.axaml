@@ -1,0 +1,27 @@
+<classic:ClassicWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:AfviTools.Localization"
+        xmlns:classic="clr-namespace:Classic.Avalonia.Theme;assembly=Classic.Avalonia.Theme"
+        xmlns:c="using:AfviTools.Controls"
+        xmlns:vm="using:AfviTools.ViewModels"
+        x:Class="AfviTools.Views.JobWindow"
+        x:DataType="vm:JobViewModel"
+        Title="{Binding WindowTitle}" Width="640" Height="420" MinWidth="480" MinHeight="320"
+        CanResize="True" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+      <Button Content="{loc:T btn_cancel_c}" MinWidth="90" Command="{Binding CancelCommand}" IsEnabled="{Binding CanCancel}" IsVisible="{Binding Running}" />
+      <Button Name="CloseButton" Content="{loc:T btn_close}" MinWidth="90" IsEnabled="{Binding !Running}" IsDefault="True" Click="OnClose" />
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" FontWeight="Bold" TextWrapping="Wrap" />
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Phase}" Margin="0,6,0,0" />
+    <ProgressBar DockPanel.Dock="Top" Minimum="0" Maximum="100" Value="{Binding Percent}" Margin="0,6,0,0" />
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Counts}" Classes="dim" Margin="0,4,0,0" />
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Current}" Classes="dim" TextTrimming="CharacterEllipsis" />
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Result}" Margin="0,6,0,0" TextWrapping="Wrap" FontWeight="Bold"
+               Classes.ng="{Binding Failed}" />
+    <c:GroupBox Header="{loc:T gb_log}" Margin="0,6,0,0">
+      <ListBox Name="LogList" ItemsSource="{Binding Log}" />
+    </c:GroupBox>
+  </DockPanel>
+</classic:ClassicWindow>

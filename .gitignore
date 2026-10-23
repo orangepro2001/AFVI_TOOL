@@ -1,0 +1,12 @@
+# local mirrors of the machines' shares (customer data, never commit)
+/.local-mirror/
+# build output
+/bin/
+/build/
+/app/**/bin/
+/app/**/obj/
+*.user
+.vs/
+# runtime
+*.log
+/shots/

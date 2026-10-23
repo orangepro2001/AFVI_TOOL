@@ -1,0 +1,39 @@
+<classic:ClassicWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:AfviTools.Localization"
+        xmlns:classic="clr-namespace:Classic.Avalonia.Theme;assembly=Classic.Avalonia.Theme"
+        xmlns:c="using:AfviTools.Controls"
+        xmlns:vm="using:AfviTools.ViewModels"
+        x:Class="AfviTools.Views.PlanWindow"
+        x:DataType="vm:PlanView"
+        Title="{loc:T plan_title}" Width="760" Height="520" MinWidth="520" MinHeight="360"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+      <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" Margin="0,0,16,0" Classes="dim" />
+      <Button Name="RunButton" Content="{loc:T btn_run}" MinWidth="90" IsEnabled="{Binding CanRun}" IsDefault="True" Click="OnRun" />
+      <Button Content="{loc:T btn_cancel}" MinWidth="90" IsCancel="True" Click="OnCancel" />
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,6" />
+    <c:GroupBox DockPanel.Dock="Top" Header="{loc:T gb_notes}" IsVisible="{Binding HasProblems}" Margin="0,0,0,6">
+      <ItemsControl ItemsSource="{Binding Problems}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:PlanLine">
+            <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="{Binding Weight}" TextWrapping="Wrap" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </c:GroupBox>
+    <c:GroupBox Header="{loc:T gb_steps}">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Steps}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:PlanLine">
+              <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}" FontWeight="{Binding Weight}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </c:GroupBox>
+  </DockPanel>
+</classic:ClassicWindow>
