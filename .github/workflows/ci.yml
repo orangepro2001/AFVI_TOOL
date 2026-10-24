@@ -1,12 +1,12 @@
-# CI for AFVI TOOLS. Runs on every push to main and on pull requests.
+# CI for AFVI TOOLS (Windows only). Runs on every push to main and on pull requests.
 #
 #   core            Go: gofmt, vet, race tests (Linux)
-#   core-windows    Go tests on a real Windows runner (case-only renames, UNC-style paths, os.Rename)
-#   gui             C#: build + headless GUI tests against the freshly built core
-#   package-windows cross-builds the Windows app into build/win (Go cross-compile + single-file dotnet publish win-x64)
-#   deploy          PLACEHOLDER, disabled. See deploy/README.md for where delivery plugs in.
+#   core-windows    Go tests on a real Windows runner
+#   package-windows cross-builds the Windows app with mingw-w64 into build/native-win and uploads it
+#   smoke-windows   PLACEHOLDER (disabled): start the exe on windows-latest and run -selftest; enable once -selftest is verified on Windows
+#   deploy          PLACEHOLDER (disabled). See deploy/README.md.
 #
-# Nothing here ever touches the machines 192.168.1.61/62/63: tests use temp directories.
+# Nothing here touches the machines 192.168.1.61/62/63: tests use temp directories.
 name: ci
 
 on:
@@ -53,35 +53,8 @@ jobs:
         working-directory: core
         run: go test ./...
 
-  gui:
-    needs: core
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: core/go.mod
-          cache-dependency-path: core/go.sum
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-      - name: fonts for the headless renderer
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fontconfig fonts-noto-cjk fonts-dejavu-core
-      - name: build core
-        run: mkdir -p bin && cd core && go build -o ../bin/afvi-core ./cmd/afvi-core
-      - name: build and test GUI
-        run: |
-          dotnet build app/src/AfviTools -c Release
-          AFVI_CORE="$PWD/bin/afvi-core" dotnet test app/tests/AfviTools.Tests
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: gui-screenshots
-          path: shots/*.png
-          if-no-files-found: ignore
-
   package-windows:
-    needs: [core, core-windows, gui]
+    needs: [core, core-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,29 +64,38 @@ jobs:
         with:
           go-version-file: core/go.mod
           cache-dependency-path: core/go.sum
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-      - name: build Windows package
-        run: scripts/build.sh --no-test --platform win
-      - name: zip
-        run: cd build && zip -qr AFVI-TOOLS-win-x64.zip win
+      - name: toolchain
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 python3 bc fonts-dejavu-core
+      - name: build
+        run: scripts/build.sh --no-test
+      - name: preview screenshots (Linux software renderer)
+        run: ls shots || true
       - uses: actions/upload-artifact@v4
         with:
-          name: AFVI-TOOLS-win-x64
-          path: build/AFVI-TOOLS-win-x64.zip
+          name: AFVI-TOOLS-win
+          path: build/native-win/AfviTools.exe
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: win32-preview
+          path: shots/*.png
+          if-no-files-found: ignore
 
-  # ---- delivery placeholder ------------------------------------------------
-  # Turn this on when the delivery path is decided (release asset, build server,
-  # network share). It only runs for main and needs the package job.
+  smoke-windows:
+    if: ${{ false }}
+    needs: package-windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AFVI-TOOLS-win
+      - name: self-test on a real Windows
+        run: .\AfviTools.exe -selftest "$env:RUNNER_TEMP\st"
+
   deploy:
     if: ${{ false && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     needs: package-windows
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: AFVI-TOOLS-win-x64
-      - name: deliver
-        run: echo "TODO: see deploy/README.md"
+      - run: echo "TODO: see deploy/README.md"

@@ -16,7 +16,7 @@ echo "== Go core (cgo, mingw)"
   go build -buildmode=c-archive -trimpath -ldflags "-s -w" -o ../$OUT/libafvi-core.a ./cmd/afvi-core-dll )
 
 echo "== GUI objects"
-python3 gui/gen_lang.py app/src/AfviTools/Assets/lang gui/lang_data.c
+python3 gui/gen_lang.py gui/lang gui/lang_data.c
 CF="-O2 -Wall -Wno-unused-function -municode -Igui"
 for f in win_main app skin i18n util lang_data third_party/cJSON; do $CC -c $CF gui/$f.c -o $OBJ/$(basename $f).o; done
 x86_64-w64-mingw32-windres gui/app.rc -o $OBJ/app_rc.o
@@ -36,6 +36,11 @@ mkdir -p $OUT/obj_linux
 for f in app skin i18n util lang_data third_party/cJSON; do gcc -c -O2 -Wall -Wno-unused-function -Igui gui/$f.c -o $OUT/obj_linux/$(basename $f).o; done
 gcc -O2 -Igui gui/preview/preview_main.c $OUT/obj_linux/*.o $OUT/libafvi-core-linux.a -lpthread -lm -ldl -o $OUT/preview
 W=$(mktemp -d); mkdir -p shots && $OUT/preview shots "$W" 1 14 | tail -1
+
+echo "== deliverable: build/native-win (static one-file exe recommended; dynamic pair for reference)"
+D=build/native-win; mkdir -p $D/dynamic
+cp $OUT/afvi-static.exe $D/AfviTools.exe
+cp $OUT/afvi-dyn.exe $D/dynamic/AfviTools.exe; cp $OUT/afvi-core.dll $D/dynamic/afvi-core.dll
 
 echo "== sizes and imports"
 for f in afvi-core.dll libafvi-core.a afvi-dyn.exe afvi-dyn-static.exe afvi-static.exe afvi-static-full.exe; do

@@ -1,9 +1,0 @@
-{
-  "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "AFVI-TOOLS",
-  "outputfilename": "AFVI-TOOLS",
-  "frontend:install": "",
-  "frontend:build": "",
-  "wailsjsdir": "./frontend",
-  "info": { "productName": "AFVI TOOLS", "companyName": "AFVI" }
-}

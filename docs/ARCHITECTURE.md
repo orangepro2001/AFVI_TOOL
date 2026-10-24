@@ -1,17 +1,19 @@
 # Architecture
 
 ```
-AfviTools (C#, Avalonia)  --- HTTP/JSON on 127.0.0.1:<random port>, header X-Afvi-Token --->  afvi-core (Go)
-        |  starts it, reads {"event":"ready","port":..,"token":..} from stdout                      |
-        |  closes its stdin on exit (or crash) -> the core exits                                    +--> \\192.168.1.6x\PxRepository / PxInventory
+AfviTools.exe  (C, plain Win32 API, GDI, everything drawn in the Windows 2000 style)
+   |  C ABI, in the same process:   afvi_init(config)   afvi_call(method, lang, json) -> json   afvi_free(ptr)
+   v
+Go core (service layer: rules, plans, jobs, vfs)  --->  \\192.168.1.6x\PxRepository / PxInventory   (read-only in the development phase)
 ```
 
-Why a sidecar process and not a c-shared DLL: no cgo (the Go code cross-compiles from Linux with `GOOS=windows`),
-a Go panic cannot take the GUI down, the core can be restarted, and the loopback call costs ~60 µs.
-The port is random, every request needs the per-launch token and a literal `127.0.0.1:<port>` Host header,
-and the child is killed with its process tree. See the audit in the win2000-style skill (`cross-platform-stacks.md`).
-Native AOT is not used (it does not cross-compile between operating systems); the Windows package is a
-self-contained `dotnet publish -r win-x64`.
+The Go core is linked into the exe statically (`go build -buildmode=c-archive`, 5.2 MB single file) or kept in `afvi-core.dll` (`c-shared`, exe 0.2 MB). Both import only
+old system DLLs (`msvcrt`, `kernel32`, `user32`, `gdi32`, `shell32`). A Go panic never crosses the C boundary (`core/internal/capi.Call` recovers and returns a JSON error);
+memory returned by `afvi_call` is C-malloc'ed and freed with `afvi_free`. The GUI draws only through `gui/gfx.h` (five operations), which has a GDI backend and a PNG
+backend, so the same code is rendered on Linux for review and tests (`docs/LINUX_TESTING.md`). Reusable controls: `docs/COMPONENT_LIBRARY.md`.
+
+Other front ends were validated and are kept as history (`docs/STACK_COMPARISON.md`). `core/cmd/afvi-core` plus `core/internal/server` is an optional loopback HTTP transport
+of the same service layer (used by the earlier Avalonia version); it is not part of the Windows deliverable.
 
 ## API (`core/internal/server`)
 

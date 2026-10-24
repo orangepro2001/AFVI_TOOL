@@ -3,13 +3,8 @@
 # build output
 /bin/
 /build/
-/app/**/bin/
-/app/**/obj/
-*.user
-.vs/
 # runtime
 *.log
 /shots/
 
-/core/cmd/afvi-wails/build/
 gui/lang_data.c

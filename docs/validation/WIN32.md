@@ -16,7 +16,7 @@ Windows**: there is no Windows machine here and Wine could not be made to work (
   `-frameless` draws the Windows 2000 caption bar (WM_NCCALCSIZE + WM_NCHITTEST); `-selftest <dir>` drives the real UI with the same journey as the Wails/Avalonia
   self-tests and verifies the files through the core (not run, no Windows).
 - `gui/preview`: the same `app.c` + `skin.c` rendered to PNG on Linux with a software canvas against the **real core** (native c-archive) on throw-away machines: copy
-  plan, job, menus, combos, refusal, four languages. This is how the look was reviewed (`docs/win32-preview/*.png`; `scripts/win32.sh` regenerates them).
+  plan, job, menus, combos, refusal, four languages. This is how the look was reviewed (`docs/validation/win32-preview/*.png`; `scripts/win32.sh` regenerates them).
   The preview uses DejaVu Sans / Noto Sans CJK because Tahoma is not on Linux (the language menu shows boxes in the English screenshots only because DejaVu has no
   Hangul; Windows font linking covers it).
 - `scripts/win32.sh`: cross-builds all of it, both link modes, and prints sizes and imported DLLs.
