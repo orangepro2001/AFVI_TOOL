@@ -1,6 +1,6 @@
-// Package server is the HTTP/JSON contract between the GUI and the core.
-// It listens on loopback only and every request must carry the per-launch
-// token the core printed on stdout.
+// Package server is the HTTP/JSON transport of the service layer, for a GUI that runs
+// as a separate process. It listens on loopback only and every request must carry the
+// per-launch token the core printed on stdout.
 package server
 
 import (
@@ -12,61 +12,30 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"runtime"
-	"strings"
 	"time"
 
 	"afvi/tools/core/internal/i18n"
 	"afvi/tools/core/internal/machine"
-	"afvi/tools/core/internal/model"
 	"afvi/tools/core/internal/ops"
-	"afvi/tools/core/internal/policy"
+	"afvi/tools/core/internal/service"
 )
 
-// Server holds the state behind the API.
+// Server serves a service.Service over HTTP.
 type Server struct {
 	Version string
-	cfg     *machine.Store
-	opener  *machine.Opener
-	jobs    *ops.Manager
+	svc     *service.Service
 	token   string
-	// forceWrite is the -allow-network-write flag: it lifts the dev-phase
-	// lock regardless of the configuration file.
-	forceWrite bool
 }
 
 // New creates a server. forceWrite lifts the read-only lock on network paths.
 func New(version string, cfg *machine.Store, forceWrite bool) *Server {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
-	return &Server{Version: version, cfg: cfg, opener: machine.NewOpener(), jobs: ops.NewManager(),
-		token: hex.EncodeToString(b), forceWrite: forceWrite}
+	return &Server{Version: version, svc: service.New(version, cfg, forceWrite), token: hex.EncodeToString(b)}
 }
 
 // Token is the secret the client must send in X-Afvi-Token.
 func (s *Server) Token() string { return s.token }
-
-func (s *Server) settings() machine.Settings {
-	set := s.cfg.Get().Settings
-	if s.forceWrite {
-		set.AllowNetworkWrite = true
-	}
-	return set
-}
-
-// Store implements ops.Env.
-func (s *Server) Store(ctx context.Context, ref policy.Ref) (model.Store, error) {
-	tr := i18n.FromContext(ctx)
-	c := s.cfg.Get()
-	m, ok := c.Find(ref.Machine)
-	if !ok {
-		return model.Store{}, errors.New(tr("m.not_found", ref.Machine))
-	}
-	if !ref.Node.Valid() {
-		return model.Store{}, errors.New(tr("m.bad_node", ref.Node))
-	}
-	return s.opener.Store(m.Node(ref.Node), s.settings())
-}
 
 // Handler returns the root handler, bound to listenAddr for Host checking.
 func (s *Server) Handler(listenAddr string) http.Handler {
@@ -153,183 +122,68 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 	return true
 }
 
-// ---- handlers -------------------------------------------------------------
+// ---- handlers: decode, call the service, encode ---------------------------------
+
+func (s *Server) result(w http.ResponseWriter, ok int, v any, err error) {
+	if err != nil {
+		fail(w, service.Status(err), err.Error())
+		return
+	}
+	reply(w, ok, v)
+}
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
-	reply(w, 200, map[string]any{
-		"version":           s.Version,
-		"os":                runtime.GOOS,
-		"allowNetworkWrite": s.settings().AllowNetworkWrite,
-		"configPath":        s.cfg.Path(),
-	})
+	reply(w, 200, s.svc.Health(r.Context()))
 }
 
 func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
-	c := s.cfg.Get()
-	reply(w, 200, map[string]any{
-		"machines": c.Machines,
-		"settings": map[string]any{
-			"smbUser":           c.Settings.SMBUser,
-			"allowNetworkWrite": s.settings().AllowNetworkWrite,
-		},
-		"kinds": machine.Kinds,
-	})
+	reply(w, 200, s.svc.GetConfig(r.Context()))
 }
 
 func (s *Server) addMachine(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
 	var m machine.Machine
 	if !decode(w, r, &m) {
 		return
 	}
-	err := s.cfg.Update(tr, func(c *machine.Config) error {
-		if _, ok := c.Find(m.Name); ok {
-			return errors.New(tr("m.exists", m.Name))
-		}
-		c.Machines = append(c.Machines, m)
-		return nil
-	})
-	if err != nil {
-		fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	reply(w, 201, m)
+	out, err := s.svc.AddMachine(r.Context(), m)
+	s.result(w, 201, out, err)
 }
 
 func (s *Server) putMachine(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
-	name := r.PathValue("name")
 	var m machine.Machine
 	if !decode(w, r, &m) {
 		return
 	}
-	err := s.cfg.Update(tr, func(c *machine.Config) error {
-		for i := range c.Machines {
-			if strings.EqualFold(c.Machines[i].Name, name) {
-				c.Machines[i] = m
-				return nil
-			}
-		}
-		return errors.New(tr("m.not_found", name))
-	})
-	if err != nil {
-		fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	reply(w, 200, m)
+	out, err := s.svc.UpdateMachine(r.Context(), r.PathValue("name"), m)
+	s.result(w, 200, out, err)
 }
 
 func (s *Server) deleteMachine(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
-	name := r.PathValue("name")
-	err := s.cfg.Update(tr, func(c *machine.Config) error {
-		for i := range c.Machines {
-			if strings.EqualFold(c.Machines[i].Name, name) {
-				c.Machines = append(c.Machines[:i], c.Machines[i+1:]...)
-				return nil
-			}
-		}
-		return errors.New(tr("m.not_found", name))
-	})
-	if err != nil {
-		fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	reply(w, 200, map[string]bool{"ok": true})
+	s.result(w, 200, map[string]bool{"ok": true}, s.svc.DeleteMachine(r.Context(), r.PathValue("name")))
 }
 
-// restoreDefaults puts the built-in AFVI 13 back when it is missing.
 func (s *Server) restoreDefaults(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
-	err := s.cfg.Update(tr, func(c *machine.Config) error {
-		d := machine.DefaultMachine()
-		if _, ok := c.Find(d.Name); !ok {
-			c.Machines = append(c.Machines, d)
-		}
-		return nil
-	})
-	if err != nil {
-		fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	reply(w, 200, map[string]bool{"ok": true})
-}
-
-// ModelRow is one line of the model list.
-type ModelRow struct {
-	Name    string `json:"name"`
-	Class   string `json:"class"`
-	Repo    bool   `json:"repo"`
-	History bool   `json:"history"`
-	Inspect int    `json:"inspect"`
-	Light   bool   `json:"light"`
-	ModTime string `json:"modTime"`
+	s.result(w, 200, map[string]bool{"ok": true}, s.svc.RestoreDefaults(r.Context()))
 }
 
 func (s *Server) listModels(w http.ResponseWriter, r *http.Request) {
-	ref := policy.Ref{Machine: r.PathValue("name"), Node: machine.NodeKind(strings.ToUpper(r.PathValue("node")))}
-	st, err := s.Store(r.Context(), ref)
-	if err != nil {
-		fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	bundles, err := model.Scan(st)
-	if err != nil {
-		fail(w, http.StatusBadGateway, err.Error())
-		return
-	}
-	rows := make([]ModelRow, 0, len(bundles))
-	for _, b := range bundles {
-		row := ModelRow{Name: b.Name, Class: b.Class, Repo: b.Has(model.KindRepo), History: b.Has(model.KindHistory),
-			Inspect: b.Count(model.KindInspect), Light: b.Has(model.KindLight)}
-		if t := b.ModTime(); !t.IsZero() {
-			row.ModTime = t.Format(time.RFC3339)
-		}
-		rows = append(rows, row)
-	}
-	reply(w, 200, map[string]any{
-		"models":     rows,
-		"readOnly":   st.ReadOnly(),
-		"repository": st.Repo.Describe(),
-		"inventory":  st.Inv.Describe(),
-	})
+	out, err := s.svc.ListModels(r.Context(), r.PathValue("name"), r.PathValue("node"))
+	s.result(w, 200, out, err)
 }
 
 func (s *Server) targets(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
-	src := policy.Ref{Machine: r.URL.Query().Get("machine"), Node: machine.NodeKind(strings.ToUpper(r.URL.Query().Get("node")))}
-	c := s.cfg.Get()
-	if _, ok := c.Find(src.Machine); !ok {
-		fail(w, http.StatusBadRequest, tr("m.not_found", src.Machine))
-		return
-	}
-	var names []string
-	for _, m := range c.Machines {
-		names = append(names, m.Name)
-	}
-	group := []string{}
-	for _, n := range names {
-		if policy.CheckGroupCopy(tr, src.Machine, n) == nil {
-			group = append(group, n)
-		}
-	}
-	reply(w, 200, map[string]any{"single": policy.Targets(src, names), "group": group})
+	out, err := s.svc.Targets(r.Context(), r.URL.Query().Get("machine"), r.URL.Query().Get("node"))
+	s.result(w, 200, out, err)
 }
 
 func (s *Server) checkName(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
 	var req struct {
 		Name string `json:"name"`
 	}
 	if !decode(w, r, &req) {
 		return
 	}
-	out := map[string]any{"ok": true, "class": model.Classify(req.Name)}
-	if err := model.ValidateName(tr, req.Name); err != nil {
-		out["ok"] = false
-		out["error"] = err.Error()
-	}
-	reply(w, 200, out)
+	reply(w, 200, s.svc.CheckName(r.Context(), req.Name))
 }
 
 func (s *Server) planCopy(w http.ResponseWriter, r *http.Request) {
@@ -337,13 +191,8 @@ func (s *Server) planCopy(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	pl, err := ops.PlanCopy(r.Context(), s, req)
-	if err != nil {
-		fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	s.jobs.Add(pl)
-	reply(w, 200, pl)
+	out, err := s.svc.PlanCopy(r.Context(), req)
+	s.result(w, 200, out, err)
 }
 
 func (s *Server) planRename(w http.ResponseWriter, r *http.Request) {
@@ -351,52 +200,30 @@ func (s *Server) planRename(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	pl, err := ops.PlanRename(r.Context(), s, req)
-	if err != nil {
-		fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	s.jobs.Add(pl)
-	reply(w, 200, pl)
+	out, err := s.svc.PlanRename(r.Context(), req)
+	s.result(w, 200, out, err)
 }
 
 func (s *Server) startJob(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
 	var req struct {
 		PlanID string `json:"planId"`
 	}
 	if !decode(w, r, &req) {
 		return
 	}
-	jv, err := s.jobs.Start(req.PlanID)
-	switch {
-	case errors.Is(err, ops.ErrBusy):
-		fail(w, http.StatusConflict, tr("j.busy"))
-	case errors.Is(err, ops.ErrNoPlan):
-		fail(w, http.StatusNotFound, tr("j.no_plan"))
-	case err != nil:
-		fail(w, http.StatusBadRequest, err.Error())
-	default:
-		reply(w, 202, jv)
-	}
+	out, err := s.svc.StartJob(r.Context(), req.PlanID)
+	s.result(w, 202, out, err)
 }
 
 func (s *Server) getJob(w http.ResponseWriter, r *http.Request) {
-	jv, ok := s.jobs.Get(r.PathValue("id"))
-	if !ok {
-		fail(w, http.StatusNotFound, "no such job")
-		return
-	}
-	reply(w, 200, jv)
+	out, err := s.svc.GetJob(r.Context(), r.PathValue("id"))
+	s.result(w, 200, out, err)
 }
 
 func (s *Server) cancelJob(w http.ResponseWriter, r *http.Request) {
-	reply(w, 200, map[string]bool{"canceled": s.jobs.Cancel(r.PathValue("id"))})
+	reply(w, 200, map[string]bool{"canceled": s.svc.CancelJob(r.Context(), r.PathValue("id"))})
 }
 
-// exportExcel is the entry point of "Export Data To Excel". The analysis and
-// the workbook are not implemented yet.
 func (s *Server) exportExcel(w http.ResponseWriter, r *http.Request) {
-	tr := i18n.FromContext(r.Context())
-	fail(w, http.StatusNotImplemented, tr("s.excel_na"))
+	s.result(w, 200, nil, s.svc.ExportExcel(r.Context()))
 }

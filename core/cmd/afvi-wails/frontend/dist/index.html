@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AFVI TOOLS</title>
+<link rel="stylesheet" href="win2000.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="w2k">
+<div class="w2k-window w2k-app" id="app">
+
+  <!-- drawn Windows 2000 caption bar: drag area + the three buttons -->
+  <div class="w2k-caption" id="caption">
+    <span id="caption-title">AFVI TOOLS</span>
+    <span class="cap-buttons">
+      <button class="w2k-btn cap-btn" id="cap-min" type="button" tabindex="-1" aria-label="minimise">_</button>
+      <button class="w2k-btn cap-btn" id="cap-max" type="button" tabindex="-1" aria-label="maximise">&#9633;</button>
+      <button class="w2k-btn cap-btn" id="cap-close" type="button" tabindex="-1" aria-label="close">&#215;</button>
+    </span>
+  </div>
+
+  <div class="w2k-menubar" id="menubar">
+    <div class="w2k-menu-wrap">
+      <div class="w2k-menu-item" data-menu="file" data-i18n="menu_file"></div>
+      <div class="w2k-menu" id="menu-file">
+        <div class="w2k-menu-item" id="mi-refresh"><span data-i18n="menu_refresh"></span><span class="w2k-shortcut">F5</span></div>
+        <div class="w2k-menu-sep"></div>
+        <div class="w2k-menu-item" id="mi-exit" data-i18n="menu_exit"></div>
+      </div>
+    </div>
+    <div class="w2k-menu-wrap">
+      <div class="w2k-menu-item" data-menu="view" data-i18n="menu_view"></div>
+      <div class="w2k-menu" id="menu-view">
+        <div class="w2k-menu-item menu-head" data-i18n="menu_fontsize"></div>
+        <div id="font-items"></div>
+        <div class="w2k-menu-sep"></div>
+        <div class="w2k-menu-item menu-head" data-i18n="menu_language"></div>
+        <div id="lang-items"></div>
+      </div>
+    </div>
+    <div class="w2k-menu-wrap">
+      <div class="w2k-menu-item" data-menu="tools" data-i18n="menu_tools"></div>
+      <div class="w2k-menu" id="menu-tools">
+        <div class="w2k-menu-item" id="mi-export" data-i18n="menu_export"></div>
+      </div>
+    </div>
+    <div class="w2k-menu-wrap">
+      <div class="w2k-menu-item" data-menu="help" data-i18n="menu_help"></div>
+      <div class="w2k-menu" id="menu-help">
+        <div class="w2k-menu-item" id="mi-about" data-i18n="menu_about"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="w2k-tabs" role="tablist">
+    <button class="w2k-tab" role="tab" aria-selected="true" type="button" id="tab-copy" data-i18n="tab_copy"></button>
+    <button class="w2k-tab" role="tab" aria-selected="false" type="button" id="tab-export" data-i18n="tab_export"></button>
+  </div>
+
+  <div class="w2k-tabpage page-area">
+
+    <!-- Model Copy -->
+    <div id="page-copy" class="page cols">
+      <div class="col-left">
+        <fieldset class="w2k-groupbox">
+          <legend data-i18n="gb_source"></legend>
+          <div class="src-row">
+            <label data-i18n="lbl_machine"></label>
+            <span class="w2k-combo"><select class="w2k-select" id="machine"></select></span>
+            <label data-i18n="lbl_node"></label>
+            <span class="w2k-combo"><select class="w2k-select" id="node"><option>FM1</option><option>FM2</option><option>BM</option></select></span>
+            <input class="w2k-input grow" id="search" type="text" data-i18n-ph="search_hint" autocomplete="off">
+            <button class="w2k-btn" id="btn-refresh" type="button" data-i18n="btn_refresh"></button>
+          </div>
+        </fieldset>
+        <div class="w2k-panel table-panel"><div class="table-scroll">
+          <table class="w2k-table" id="models">
+            <thead><tr>
+              <th data-i18n="col_model"></th><th data-i18n="col_class"></th><th>PxRepository</th><th>.his</th>
+              <th>INSPECT_SPEC</th><th>LIGHT_SPEC</th><th data-i18n="col_modified"></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div></div>
+      </div>
+
+      <div class="col-right">
+        <fieldset class="w2k-groupbox">
+          <legend data-i18n="gb_copy"></legend>
+          <div class="w2k-note" id="source-label"></div>
+          <label class="w2k-check"><input type="radio" name="copymode" id="mode-single" checked><span class="radio"></span><i class="lbl" data-i18n="rb_single"></i></label>
+          <div class="w2k-row indent"><label data-i18n="lbl_target_node"></label><span class="w2k-combo"><select class="w2k-select" id="target-single"></select></span></div>
+          <label class="w2k-check"><input type="radio" name="copymode" id="mode-group"><span class="radio"></span><i class="lbl" data-i18n="rb_group"></i></label>
+          <div class="w2k-row indent"><label data-i18n="lbl_target_machine"></label><span class="w2k-combo"><select class="w2k-select" id="target-group"></select></span></div>
+          <div class="w2k-row"><label data-i18n="lbl_newname_opt"></label><input class="w2k-input" id="copy-name" type="text" data-i18n-ph="hint_keep_name" autocomplete="off"></div>
+          <div class="w2k-note" data-i18n="note_copy"></div>
+          <div class="btn-right"><button class="w2k-btn" id="btn-copy" type="button" data-i18n="btn_copy" disabled></button></div>
+        </fieldset>
+
+        <fieldset class="w2k-groupbox">
+          <legend data-i18n="gb_rename"></legend>
+          <label class="w2k-check"><input type="checkbox" id="rename-group"><span></span><i class="lbl" data-i18n="chk_rename_group"></i></label>
+          <div class="w2k-row"><label data-i18n="lbl_newname"></label><input class="w2k-input" id="rename-name" type="text" autocomplete="off"></div>
+          <div class="btn-right"><button class="w2k-btn" id="btn-rename" type="button" data-i18n="btn_rename" disabled></button></div>
+        </fieldset>
+
+        <fieldset class="w2k-groupbox">
+          <legend data-i18n="gb_rules"></legend>
+          <div class="w2k-note" data-i18n="rule_1"></div>
+          <div class="w2k-note" data-i18n="rule_2"></div>
+          <div class="w2k-note" data-i18n="rule_3"></div>
+          <div class="w2k-note" data-i18n="rule_4"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- Export Data To Excel (entry only) -->
+    <div id="page-export" class="page" hidden>
+      <fieldset class="w2k-groupbox" style="max-width: calc(520 * var(--w2k-u));">
+        <legend data-i18n="gb_export"></legend>
+        <div data-i18n="export_page_text"></div>
+        <div class="btn-left"><button class="w2k-btn" id="btn-export" type="button" data-i18n="btn_export"></button></div>
+      </fieldset>
+    </div>
+  </div>
+
+  <div class="w2k-statusbar">
+    <div class="w2k-pane is-grow" id="st-text"></div>
+    <div class="w2k-pane" id="st-path"></div>
+    <div class="w2k-pane" id="st-count"></div>
+    <div class="w2k-pane" id="st-lock"></div>
+    <div class="w2k-grip"></div>
+  </div>
+</div>
+
+<!-- modal dialogs -->
+<div id="overlay" class="overlay" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

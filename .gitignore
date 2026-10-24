@@ -10,3 +10,5 @@
 # runtime
 *.log
 /shots/
+
+/core/cmd/afvi-wails/build/

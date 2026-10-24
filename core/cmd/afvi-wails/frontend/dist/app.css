@@ -1,0 +1,52 @@
+/* application layout on top of win2000.css */
+html, body { height: 100%; margin: 0; overflow: hidden; }
+.w2k-app { height: 100vh; box-sizing: border-box; }
+.w2k-caption { --wails-draggable: drag; justify-content: space-between; }
+.cap-buttons { display: flex; gap: 2px; --wails-draggable: no-drag; }
+.cap-btn { min-width: 0; width: calc(16 * var(--w2k-u)); height: calc(14 * var(--w2k-u)); padding: 0; line-height: 1; font-size: calc(10 * var(--w2k-u)); }
+.page-area { flex: 1; min-height: 0; margin: 0 4px; display: flex; }
+.page { flex: 1; min-width: 0; min-height: 0; padding: 4px; }
+.page.cols { display: flex; gap: calc(6 * var(--w2k-u)); }
+.col-left { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.col-right { width: calc(340 * var(--w2k-u)); flex: none; overflow-y: auto; }
+.src-row { display: flex; gap: calc(6 * var(--w2k-u)); align-items: center; }
+.src-row .grow { flex: 1; min-width: 0; }
+.table-panel { flex: 1; min-height: 0; margin-top: calc(4 * var(--w2k-u)); background: var(--w2k-field); }
+.table-scroll { height: 100%; overflow: auto; background: var(--w2k-field); }
+.w2k-table { width: 100%; border-collapse: collapse; }
+.w2k-table th, .w2k-table td { white-space: nowrap; text-align: left; padding: 1px calc(6 * var(--w2k-u)); }
+.w2k-table thead th { position: sticky; top: 0; }
+.w2k-row.indent { margin-left: calc(18 * var(--w2k-u)); }
+.w2k-row { grid-template-columns: auto 1fr; }
+.btn-right { display: flex; justify-content: flex-end; margin-top: calc(6 * var(--w2k-u)); }
+.btn-left { display: flex; margin-top: calc(8 * var(--w2k-u)); }
+.menu-head { color: var(--w2k-text-dim); pointer-events: none; }
+.w2k-menu { display: none; }
+.w2k-menu.is-open { display: block; }
+.w2k-check .lbl { font-style: normal; }
+/* radio buttons are round in every Windows version: sunken ring, dot when checked */
+.w2k-check input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+.w2k-check > span.radio { display: inline-block; flex: none; width: calc(12 * var(--w2k-u)); height: calc(12 * var(--w2k-u)); border-radius: 50%;
+  background: var(--w2k-field); box-shadow: inset 1px 1px 0 var(--w2k-shadow), inset -1px -1px 0 var(--w2k-highlight), inset 2px 2px 0 var(--w2k-dkshadow), inset -2px -2px 0 var(--w2k-light); }
+.w2k-check input[type="radio"]:checked + span.radio::after { content: ""; position: absolute; width: calc(4 * var(--w2k-u)); height: calc(4 * var(--w2k-u)); border-radius: 50%;
+  background: var(--w2k-text); margin: calc(4 * var(--w2k-u)); }
+.w2k-check input[type="radio"]:disabled + span.radio { background: var(--w2k-face); }
+.w2k-check input[type="radio"]:disabled + span.radio + .lbl { color: var(--w2k-text-disabled); }
+.w2k-menu-item.is-on::before { content: "\2022  "; }
+.w2k-check > .radio { border-radius: 0; }
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.30); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.overlay[hidden] { display: none; }
+.dialog { width: min(calc(720 * var(--w2k-u)), 94vw); max-height: 90vh; display: flex; flex-direction: column; }
+.dialog .w2k-dialog-body { padding: calc(10 * var(--w2k-u)); overflow: auto; flex: 1; min-height: 0; }
+.dialog .steps { font-family: Tahoma, "Microsoft YaHei", "Malgun Gothic", sans-serif; white-space: pre-wrap; }
+.dialog .steps .h { font-weight: bold; }
+.dialog .steps .indent { padding-left: calc(16 * var(--w2k-u)); }
+.dialog .danger { color: var(--w2k-ng); }
+.dialog .warn { color: var(--w2k-warn); }
+.dialog .blocker { color: var(--w2k-ng); font-weight: bold; }
+.dialog .sum { margin-right: auto; padding-left: calc(10 * var(--w2k-u)); color: var(--w2k-text-dim); align-self: center; }
+.dialog .w2k-dialog-buttons { padding-top: calc(6 * var(--w2k-u)); }
+.bar { height: calc(16 * var(--w2k-u)); background: var(--w2k-field); margin: calc(6 * var(--w2k-u)) 0; position: relative; }
+.bar > i { position: absolute; left: 2px; top: 2px; bottom: 2px; background: repeating-linear-gradient(90deg, var(--w2k-select) 0, var(--w2k-select) calc(8 * var(--w2k-u)), transparent calc(8 * var(--w2k-u)), transparent calc(10 * var(--w2k-u))); }
+.log { height: calc(110 * var(--w2k-u)); overflow: auto; background: var(--w2k-field); padding: 2px 4px; }
+.col-right .w2k-check { display: flex; margin-bottom: calc(4 * var(--w2k-u)); }

@@ -1,0 +1,1009 @@
+/* win2000.css — classic Windows 2000 / retro desktop skin for the web.
+ *
+ * A CSS port of the Windows 2000 skin. Every colour comes from the
+ * palette table and every length from the Geometry table of references/design-tokens.md;
+ * the bevel recipes mirror references/imgui-go/win2000.go.txt.
+ *
+ * Single-file artifacts cannot link files: inline this whole stylesheet into a <style>
+ * element. The page then only needs the classes below.
+ *
+ * Theme: <html data-theme="light"> or <html data-theme="dark">. Without the attribute
+ * the OS preference (prefers-color-scheme) decides; data-theme="light" always wins.
+ *
+ * Size: set --w2k-font-size (10px..28px, default 16px). --w2k-u is one design pixel
+ * (font-size / 13); every scalable length is a multiple of it. Bevel rings are always
+ * literal 1px/2px and never scale.
+ *
+ * Classes: .w2k .w2k-raised .w2k-sunken .w2k-field .w2k-pressed .w2k-status .w2k-etched
+ * .w2k-window .w2k-btn .w2k-tool .w2k-input .w2k-select .w2k-combo .w2k-check .w2k-range
+ * .w2k-row .w2k-groupbox .w2k-section .w2k-tabs .w2k-tab .w2k-tabpage .w2k-caption
+ * .w2k-dialog-body .w2k-dialog-buttons .w2k-menubar .w2k-menu-item .w2k-menu .w2k-shortcut
+ * .w2k-menu-sep .w2k-toolbar .w2k-sep .w2k-statusbar .w2k-pane .w2k-grip .w2k-table
+ * .w2k-menu-wrap .w2k-slider .w2k-slider-value
+ * .w2k-scroll .w2k-kv .w2k-badge .w2k-viewer .w2k-chart .w2k-bar .w2k-dim .w2k-warn
+ * .w2k-okc .w2k-ngc .w2k-note .w2k-app .w2k-page .w2k-panel .w2k-panel-body .w2k-grow
+ */
+
+/* ------------------------------------------------------------------ variables */
+
+:root {
+  --w2k-face: #D4D0C8;
+  --w2k-highlight: #FFFFFF;
+  --w2k-light: #E8E5DE;
+  --w2k-shadow: #808080;
+  --w2k-dkshadow: #404040;
+  --w2k-field: #FFFFFF;
+  --w2k-select: #0A246A;
+  --w2k-select-text: #FFFFFF;
+  --w2k-caption-l: #0A246A;
+  --w2k-caption-r: #A6CAF0;
+  --w2k-caption-text: #FFFFFF;
+  --w2k-text: #000000;
+  --w2k-text-disabled: #808080;
+  --w2k-text-dim: #404040;
+  --w2k-workspace: #808080;
+  --w2k-viewer-edge: #404040;
+  --w2k-chart-bg: #FFFFFF;
+  --w2k-chart-grid: #C0C0C0;
+  --w2k-chart-bar: #000080;
+  --w2k-chart-mark: #FF0000;
+  --w2k-warn: #806000;
+  --w2k-ok: #008000;
+  --w2k-ng: #C00000;
+  --w2k-row-select: #A6B8D6;
+  --w2k-row-hover: #BACAE4;
+  --w2k-row-alt: rgba(0, 0, 0, 0.04);
+  --w2k-scroll-track: #E8E5DE;
+
+  --w2k-font-size: 16px;
+  --w2k-u: calc(var(--w2k-font-size) / 13);
+}
+
+:root[data-theme="dark"] {
+  --w2k-face: #3A3A3A;
+  --w2k-highlight: #707070;
+  --w2k-light: #545454;
+  --w2k-shadow: #181818;
+  --w2k-dkshadow: #080808;
+  --w2k-field: #1C1C1C;
+  --w2k-select: #1D3461;
+  --w2k-select-text: #FFFFFF;
+  --w2k-caption-l: #1D3461;
+  --w2k-caption-r: #466496;
+  --w2k-caption-text: #FFFFFF;
+  --w2k-text: #E0E0E0;
+  --w2k-text-disabled: #828282;
+  --w2k-text-dim: #A8A8A8;
+  --w2k-workspace: #2B2B2B;
+  --w2k-viewer-edge: #101010;
+  --w2k-chart-bg: #000000;
+  --w2k-chart-grid: #1E3A1E;
+  --w2k-chart-bar: #00C000;
+  --w2k-chart-mark: #FFFF00;
+  --w2k-warn: #E0B030;
+  --w2k-ok: #3CC83C;
+  --w2k-ng: #FF5050;
+  --w2k-row-select: #1D3461;
+  --w2k-row-hover: #1D3461;
+  --w2k-row-alt: rgba(255, 255, 255, 0.03);
+  --w2k-scroll-track: #545454;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --w2k-face: #3A3A3A;
+    --w2k-highlight: #707070;
+    --w2k-light: #545454;
+    --w2k-shadow: #181818;
+    --w2k-dkshadow: #080808;
+    --w2k-field: #1C1C1C;
+    --w2k-select: #1D3461;
+    --w2k-select-text: #FFFFFF;
+    --w2k-caption-l: #1D3461;
+    --w2k-caption-r: #466496;
+    --w2k-caption-text: #FFFFFF;
+    --w2k-text: #E0E0E0;
+    --w2k-text-disabled: #828282;
+    --w2k-text-dim: #A8A8A8;
+    --w2k-workspace: #2B2B2B;
+    --w2k-viewer-edge: #101010;
+    --w2k-chart-bg: #000000;
+    --w2k-chart-grid: #1E3A1E;
+    --w2k-chart-bar: #00C000;
+    --w2k-chart-mark: #FFFF00;
+    --w2k-warn: #E0B030;
+    --w2k-ok: #3CC83C;
+    --w2k-ng: #FF5050;
+    --w2k-row-select: #1D3461;
+    --w2k-row-hover: #1D3461;
+    --w2k-row-alt: rgba(255, 255, 255, 0.03);
+    --w2k-scroll-track: #545454;
+  }
+}
+
+/* ------------------------------------------------------------------ base */
+
+.w2k {
+  background: var(--w2k-face);
+  color: var(--w2k-text);
+  font-family: Tahoma, "Microsoft YaHei", "Malgun Gothic", "Segoe UI", sans-serif;
+  font-size: var(--w2k-font-size);
+  font-weight: normal;
+  line-height: 1.25;
+  cursor: default;
+  user-select: none;
+}
+
+.w2k,
+.w2k *,
+.w2k *::before,
+.w2k *::after {
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+.w2k input,
+.w2k textarea,
+.w2k select {
+  user-select: text;
+}
+
+/* ------------------------------------------------------------------ bevels
+ * box-shadow paints the first listed shadow on top. The top-right and bottom-left
+ * corner pixels may differ by one pixel from the ImGui rings (ImGui gives them to the
+ * top and bottom strips); this is an accepted approximation.
+ * Any element carrying a bevel needs at least 2px padding on every side.
+ */
+
+.w2k-raised {
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-sunken {
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-field {
+  background: var(--w2k-field);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-pressed {
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-dkshadow),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-shadow);
+}
+
+.w2k-status {
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow);
+}
+
+.w2k-etched {
+  border: 1px solid var(--w2k-shadow);
+  margin: 0 1px 1px 0;
+  box-shadow:
+    1px 1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-highlight);
+}
+
+.w2k-window {
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-light),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-highlight);
+}
+
+/* ------------------------------------------------------------------ buttons */
+
+.w2k-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(75 * var(--w2k-u));
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  padding: 0 calc(12 * var(--w2k-u));
+  border: 0;
+  background: var(--w2k-face);
+  color: var(--w2k-text);
+  font: inherit;
+  cursor: default;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-btn:active,
+.w2k-btn.is-pressed {
+  padding: 1px 0 0 1px;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-dkshadow),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-shadow);
+}
+
+.w2k-btn:disabled,
+.w2k-btn[aria-disabled="true"] {
+  color: var(--w2k-shadow);
+  text-shadow: 1px 1px 0 var(--w2k-highlight);
+}
+
+.w2k-btn:focus-visible {
+  outline: 1px dotted var(--w2k-text);
+  outline-offset: -4px;
+}
+
+.w2k-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(75 * var(--w2k-u));
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  padding: 0 calc(12 * var(--w2k-u));
+  border: 0;
+  background: var(--w2k-face);
+  color: var(--w2k-text);
+  font: inherit;
+  cursor: default;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-tool.is-active {
+  padding: 1px 0 0 1px;
+  background: var(--w2k-light);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-dkshadow),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-shadow);
+}
+
+.w2k-tool:focus-visible {
+  outline: 1px dotted var(--w2k-text);
+  outline-offset: -4px;
+}
+
+/* ------------------------------------------------------------------ inputs */
+
+.w2k-input {
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  padding: calc(3 * var(--w2k-u)) calc(4 * var(--w2k-u));
+  border: 0;
+  outline: none;
+  background: var(--w2k-field);
+  color: var(--w2k-text);
+  font: inherit;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+textarea.w2k-input {
+  height: auto;
+  min-height: calc(48 * var(--w2k-u));
+  resize: none;
+}
+
+.w2k-input::placeholder {
+  color: var(--w2k-text-disabled);
+}
+
+.w2k-input:disabled {
+  color: var(--w2k-text-disabled);
+}
+
+.w2k-combo {
+  position: relative;
+  display: inline-block;
+  min-width: calc(120 * var(--w2k-u));
+}
+
+.w2k-select {
+  width: 100%;
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  padding: calc(3 * var(--w2k-u)) calc(20 * var(--w2k-u)) calc(3 * var(--w2k-u)) calc(4 * var(--w2k-u));
+  border: 0;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--w2k-field);
+  color: var(--w2k-text);
+  font: inherit;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-combo::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: calc(16 * var(--w2k-u));
+  height: 100%;
+  pointer-events: none;
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-combo::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: calc(5 * var(--w2k-u));
+  z-index: 1;
+  width: 0;
+  height: 0;
+  margin-top: calc(-2 * var(--w2k-u));
+  pointer-events: none;
+  border-left: calc(3 * var(--w2k-u)) solid transparent;
+  border-right: calc(3 * var(--w2k-u)) solid transparent;
+  border-top: calc(4 * var(--w2k-u)) solid var(--w2k-text);
+}
+
+.w2k-check {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(4 * var(--w2k-u));
+  cursor: default;
+}
+
+.w2k-check input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+
+.w2k-check > span {
+  position: relative;
+  display: inline-block;
+  width: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  background: var(--w2k-field);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-check input[type="checkbox"]:checked + span::after {
+  content: "";
+  position: absolute;
+  left: 30%;
+  top: 12%;
+  width: 30%;
+  height: 60%;
+  border-right: 2px solid var(--w2k-text);
+  border-bottom: 2px solid var(--w2k-text);
+  transform: rotate(45deg);
+}
+
+.w2k-check input[type="checkbox"]:focus-visible + span {
+  outline: 1px dotted var(--w2k-text);
+  outline-offset: 2px;
+}
+
+.w2k-range {
+  width: 100%;
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+/* The track pseudo-element paints over the input's own box, so the Sunken bevel lives on it. */
+.w2k-range::-webkit-slider-runnable-track {
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  background: var(--w2k-field);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: calc(11 * var(--w2k-u));
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  margin-top: 0;
+  border: 0;
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-range::-moz-range-track {
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  background: var(--w2k-field);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-range::-moz-range-thumb {
+  width: calc(11 * var(--w2k-u));
+  height: calc(var(--w2k-font-size) + 8 * var(--w2k-u));
+  border: 0;
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+/* The slider wrapper holds an <input class="w2k-range"> and a
+ * <span class="w2k-slider-value"> whose text is the current value. The thumb is
+ * drawn by the input; the value text sits on top of it, centred in the track. */
+.w2k-slider {
+  position: relative;
+}
+
+.w2k-slider-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--w2k-text);
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ rows, groups, sections */
+
+.w2k-row {
+  display: grid;
+  grid-template-columns: calc(112 * var(--w2k-u)) 1fr;
+  align-items: center;
+  gap: calc(6 * var(--w2k-u));
+  margin-bottom: calc(4 * var(--w2k-u));
+}
+
+.w2k-row > label {
+  color: var(--w2k-text);
+}
+
+.w2k-groupbox {
+  border: 1px solid var(--w2k-shadow);
+  margin: 0 1px calc(6 * var(--w2k-u)) 0;
+  padding: calc(8 * var(--w2k-u)) calc(10 * var(--w2k-u)) calc(8 * var(--w2k-u)) calc(8 * var(--w2k-u));
+  box-shadow:
+    1px 1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-highlight);
+}
+
+.w2k-groupbox > legend {
+  background: var(--w2k-face);
+  margin-left: calc(8 * var(--w2k-u));
+  padding: 0 calc(3 * var(--w2k-u));
+}
+
+.w2k-section {
+  margin-bottom: calc(4 * var(--w2k-u));
+}
+
+.w2k-section > summary {
+  display: flex;
+  align-items: center;
+  gap: calc(4 * var(--w2k-u));
+  padding: calc(3 * var(--w2k-u)) calc(6 * var(--w2k-u));
+  background: var(--w2k-face);
+  cursor: default;
+  list-style: none;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.w2k-section > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin: 0 calc(4 * var(--w2k-u)) 0 calc(2 * var(--w2k-u));
+  border-top: calc(4 * var(--w2k-u)) solid transparent;
+  border-bottom: calc(4 * var(--w2k-u)) solid transparent;
+  border-left: calc(6 * var(--w2k-u)) solid var(--w2k-text);
+}
+
+.w2k-section[open] > summary::before {
+  border-top: calc(6 * var(--w2k-u)) solid var(--w2k-text);
+  border-left: calc(4 * var(--w2k-u)) solid transparent;
+  border-right: calc(4 * var(--w2k-u)) solid transparent;
+  border-bottom: 0;
+}
+
+.w2k-section > .w2k-section-body {
+  padding: calc(6 * var(--w2k-u)) calc(4 * var(--w2k-u));
+}
+
+/* ------------------------------------------------------------------ tabs */
+
+.w2k-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding-left: 10px;
+}
+
+.w2k-tab {
+  height: calc(var(--w2k-font-size) + 12 * var(--w2k-u));
+  padding: 0 calc(12 * var(--w2k-u));
+  border: 0;
+  background: var(--w2k-face);
+  color: var(--w2k-text);
+  font: inherit;
+  cursor: default;
+  margin-top: 2px;
+  box-shadow:
+    inset -1px 0 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px 0 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-tab[aria-selected="true"] {
+  margin: -2px -2px -2px -2px;
+  padding: 0 calc(14 * var(--w2k-u));
+  z-index: 1;
+  box-shadow:
+    inset -1px 0 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px 0 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-tab:focus-visible {
+  outline: 1px dotted var(--w2k-text);
+  outline-offset: -4px;
+}
+
+.w2k-tabpage {
+  padding: calc(4 * var(--w2k-u));
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-light),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-highlight);
+}
+
+/* ------------------------------------------------------------------ window, caption, dialog */
+
+.w2k-caption {
+  display: flex;
+  align-items: center;
+  height: calc(20 * var(--w2k-u));
+  margin: 3px;
+  padding: 0 3px;
+  background: linear-gradient(90deg, var(--w2k-caption-l), var(--w2k-caption-r));
+  color: var(--w2k-caption-text);
+  font-weight: bold;
+}
+
+.w2k-caption.is-inactive {
+  background: linear-gradient(90deg, var(--w2k-shadow), var(--w2k-face));
+}
+
+.w2k-dialog-body {
+  padding: calc(16 * var(--w2k-u));
+}
+
+.w2k-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: calc(6 * var(--w2k-u));
+  padding: 0 calc(16 * var(--w2k-u)) calc(16 * var(--w2k-u));
+}
+
+/* ------------------------------------------------------------------ menus */
+
+.w2k-menubar {
+  display: flex;
+  background: var(--w2k-face);
+}
+
+.w2k-menu-item {
+  display: flex;
+  align-items: center;
+  gap: calc(16 * var(--w2k-u));
+  padding: calc(3 * var(--w2k-u)) calc(8 * var(--w2k-u));
+  cursor: default;
+  white-space: nowrap;
+}
+
+.w2k-menu-item:hover,
+.w2k-menu-item.is-hot {
+  background: var(--w2k-select);
+  color: var(--w2k-select-text);
+}
+
+.w2k-menu-wrap {
+  position: relative;
+}
+
+.w2k-menu {
+  position: absolute;
+  z-index: 20;
+  min-width: calc(160 * var(--w2k-u));
+  padding: 3px;
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-light),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-highlight);
+}
+
+.w2k-menu .w2k-menu-item {
+  justify-content: space-between;
+}
+
+.w2k-shortcut {
+  color: inherit;
+  margin-left: auto;
+  padding-left: calc(16 * var(--w2k-u));
+}
+
+.w2k-menu-sep {
+  height: 2px;
+  margin: calc(3 * var(--w2k-u)) calc(2 * var(--w2k-u));
+  border-top: 1px solid var(--w2k-shadow);
+  border-bottom: 1px solid var(--w2k-highlight);
+}
+
+/* ------------------------------------------------------------------ toolbar, status bar */
+
+.w2k-toolbar {
+  display: flex;
+  align-items: center;
+  gap: calc(6 * var(--w2k-u));
+  height: calc(34 * var(--w2k-u));
+  padding: 0 calc(8 * var(--w2k-u));
+  background: var(--w2k-face);
+  box-shadow:
+    inset 0 -1px 0 0 var(--w2k-highlight),
+    inset 0 -2px 0 0 var(--w2k-shadow);
+}
+
+.w2k-sep {
+  width: 6px;
+  align-self: stretch;
+  margin: 4px 2px;
+  border-left: 1px solid var(--w2k-shadow);
+  box-shadow: 1px 0 0 0 var(--w2k-highlight);
+}
+
+.w2k-statusbar {
+  display: flex;
+  gap: 2px;
+  height: calc(24 * var(--w2k-u));
+  padding: 2px 0;
+  background: var(--w2k-face);
+}
+
+.w2k-pane {
+  display: flex;
+  align-items: center;
+  padding: 0 calc(6 * var(--w2k-u));
+  white-space: nowrap;
+  overflow: hidden;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow);
+}
+
+.w2k-pane.is-grow {
+  flex: 1;
+}
+
+.w2k-grip {
+  width: 14px;
+  height: 14px;
+  align-self: flex-end;
+  margin-left: auto;
+  background:
+    repeating-linear-gradient(135deg,
+      var(--w2k-shadow) 0, var(--w2k-shadow) 1px,
+      transparent 1px, transparent 2px,
+      var(--w2k-highlight) 2px, var(--w2k-highlight) 3px,
+      transparent 3px, transparent 4px);
+}
+
+/* ------------------------------------------------------------------ tables */
+
+.w2k-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--w2k-field);
+  color: var(--w2k-text);
+}
+
+.w2k-table th {
+  background: var(--w2k-face);
+  text-align: left;
+  padding: calc(2 * var(--w2k-u)) calc(6 * var(--w2k-u));
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k-table td {
+  padding: calc(2 * var(--w2k-u)) calc(6 * var(--w2k-u));
+  border: 1px solid var(--w2k-shadow);
+}
+
+.w2k-table tbody tr:nth-child(even) {
+  background: var(--w2k-row-alt);
+}
+
+.w2k-table tbody tr:hover td {
+  background: var(--w2k-row-hover);
+}
+
+.w2k-table tbody tr.is-selected td {
+  background: var(--w2k-row-select);
+}
+
+.w2k-scroll {
+  overflow: auto;
+  background: var(--w2k-field);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+/* ------------------------------------------------------------------ key/value, badges */
+
+.w2k-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: calc(2 * var(--w2k-u)) calc(12 * var(--w2k-u));
+}
+
+.w2k-kv > dt {
+  color: var(--w2k-text-dim);
+}
+
+.w2k-kv > dd {
+  margin: 0;
+  text-align: right;
+}
+
+.w2k-badge {
+  display: inline-block;
+  padding: calc(3 * var(--w2k-u)) calc(8 * var(--w2k-u));
+  font-weight: normal;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-badge.is-ok {
+  background: #00C000;
+  color: #000000;
+}
+
+.w2k-badge.is-manual {
+  background: #FFD800;
+  color: #000000;
+}
+
+.w2k-badge.is-ng {
+  background: #FF0000;
+  color: #FFFFFF;
+}
+
+/* ------------------------------------------------------------------ viewer, charts */
+
+.w2k-viewer {
+  position: relative;
+  padding: 2px;
+  background: var(--w2k-workspace);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-chart {
+  padding: 2px;
+  background: var(--w2k-chart-bg);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-bar {
+  display: inline-block;
+  width: 2px;
+  background: var(--w2k-chart-bar);
+  vertical-align: bottom;
+}
+
+.w2k-bar.is-mark {
+  background: var(--w2k-chart-mark);
+}
+
+/* ------------------------------------------------------------------ text helpers */
+
+.w2k-dim {
+  color: var(--w2k-text-dim);
+}
+
+.w2k-warn {
+  color: var(--w2k-warn);
+}
+
+.w2k-okc {
+  color: var(--w2k-ok);
+}
+
+.w2k-ngc {
+  color: var(--w2k-ng);
+}
+
+.w2k-note {
+  color: var(--w2k-text-dim);
+  white-space: normal;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.w2k-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.w2k-page {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  margin: 0 4px;
+  padding: 4px;
+  min-height: 0;
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-light),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-highlight);
+}
+
+.w2k-panel {
+  padding: 2px;
+  min-height: 0;
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-highlight),
+    inset 1px 1px 0 0 var(--w2k-shadow),
+    inset -2px -2px 0 0 var(--w2k-light),
+    inset 2px 2px 0 0 var(--w2k-dkshadow);
+}
+
+.w2k-panel.is-left {
+  width: calc(340 * var(--w2k-u));
+  flex: none;
+}
+
+.w2k-panel.is-right {
+  width: calc(380 * var(--w2k-u));
+  flex: none;
+}
+
+.w2k-panel-body {
+  height: 100%;
+  overflow: auto;
+  padding: calc(6 * var(--w2k-u));
+  background: var(--w2k-face);
+}
+
+.w2k-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ scrollbars */
+
+.w2k ::-webkit-scrollbar {
+  width: calc(16 * var(--w2k-u));
+  height: calc(16 * var(--w2k-u));
+}
+
+.w2k ::-webkit-scrollbar-track {
+  background:
+    conic-gradient(var(--w2k-face) 0 25%, var(--w2k-highlight) 0 50%,
+      var(--w2k-face) 0 75%, var(--w2k-highlight) 0 100%);
+  background-size: 2px 2px;
+}
+
+.w2k ::-webkit-scrollbar-thumb {
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k ::-webkit-scrollbar-button {
+  background: var(--w2k-face);
+  box-shadow:
+    inset -1px -1px 0 0 var(--w2k-dkshadow),
+    inset 1px 1px 0 0 var(--w2k-highlight),
+    inset -2px -2px 0 0 var(--w2k-shadow),
+    inset 2px 2px 0 0 var(--w2k-light);
+}
+
+.w2k ::-webkit-scrollbar-corner {
+  background: var(--w2k-face);
+}
+
+.w2k {
+  scrollbar-color: var(--w2k-face) var(--w2k-scroll-track);
+}
