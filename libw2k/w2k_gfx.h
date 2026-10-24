@@ -1,7 +1,7 @@
-/* The few drawing operations the Windows 2000 skin needs. Backends: GDI (Windows) and a PNG software
- * canvas (Linux preview). Colours are 0xRRGGBB, coordinates whole pixels. */
-#ifndef GFX_H
-#define GFX_H
+/* libw2k layer 0: the few drawing operations the Windows 2000 skin needs. Backends: GDI (w2k_gdi.c, Windows) and a PNG
+ * software canvas (w2k_png.c, Linux tests and previews). Colours are 0xRRGGBB, coordinates whole pixels. */
+#ifndef W2K_GFX_H
+#define W2K_GFX_H
 #include <stdint.h>
 #include <wchar.h>
 typedef struct gfx {
@@ -12,5 +12,5 @@ typedef struct gfx {
     int  (*text_w)(void *ctx, const wchar_t *s, int n, int bold);
     void (*clip)(void *ctx, int x, int y, int w, int h);   /* w<=0: remove clip */
     int  text_h;                                            /* line height of the current font */
-} gfx_t;
+} w2k_gfx;
 #endif

@@ -10,37 +10,17 @@
 #include <shellapi.h>
 #include <stdio.h>
 #include "app.h"
-#include "skin.h"
+#include "w2k.h"
+#include "w2k_gdi.h"
 #include "util.h"
 #include "afvi_core.h"
 
 #define WM_RESULT (WM_APP + 1)
 
 static HWND g_hwnd, g_edit[EDIT_COUNT];
-static HFONT g_font[2];
-static int g_text_h, g_aa;
+static int g_aa;
 static HBRUSH g_white;
 static int g_frameless;
-
-/* ---- GDI backend ------------------------------------------------------------------------------------- */
-static COLORREF cr(uint32_t rgb) { return RGB((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255); }
-static void g_fill(void *c, int x, int y, int w, int h, uint32_t rgb) { RECT r = {x, y, x + w, y + h}; HBRUSH b = CreateSolidBrush(cr(rgb)); FillRect((HDC)c, &r, b); DeleteObject(b); }
-static void g_gradient(void *c, int x, int y, int w, int h, uint32_t l, uint32_t r) {
-    for (int i = 0; i < w; i++) {
-        int rr = (int)((l >> 16) & 255) + ((int)((r >> 16) & 255) - (int)((l >> 16) & 255)) * i / (w > 1 ? w - 1 : 1);
-        int gg = (int)((l >> 8) & 255) + ((int)((r >> 8) & 255) - (int)((l >> 8) & 255)) * i / (w > 1 ? w - 1 : 1);
-        int bb = (int)(l & 255) + ((int)(r & 255) - (int)(l & 255)) * i / (w > 1 ? w - 1 : 1);
-        g_fill(c, x + i, y, 1, h, ((uint32_t)rr << 16) | ((uint32_t)gg << 8) | (uint32_t)bb);
-    }
-}
-static void g_text(void *c, int x, int y, const wchar_t *s, int n, uint32_t rgb, int bold) {
-    HDC dc = (HDC)c; SelectObject(dc, g_font[bold ? 1 : 0]); SetBkMode(dc, TRANSPARENT); SetTextColor(dc, cr(rgb)); ExtTextOutW(dc, x, y, 0, NULL, s, n, NULL);
-}
-static int g_text_w(void *c, const wchar_t *s, int n, int bold) { SIZE sz; SelectObject((HDC)c, g_font[bold ? 1 : 0]); GetTextExtentPoint32W((HDC)c, s, n, &sz); return sz.cx; }
-static void g_clip(void *c, int x, int y, int w, int h) {
-    if (w <= 0) { SelectClipRgn((HDC)c, NULL); return; }
-    HRGN r = CreateRectRgn(x, y, x + w, y + h); SelectClipRgn((HDC)c, r); DeleteObject(r);
-}
 
 /* ---- host callbacks ---------------------------------------------------------------------------------------- */
 typedef struct { int id; char *method, *args; char lang[16]; } Job;
@@ -76,13 +56,9 @@ static void h_window_cmd(int c) {
 }
 static void h_set_timer(int ms) { if (ms > 0) SetTimer(g_hwnd, 1, ms, NULL); else KillTimer(g_hwnd, 1); }
 static void h_set_font(const char *face, int px) {
-    for (int i = 0; i < 2; i++) { if (g_font[i]) DeleteObject(g_font[i]); }
     int en = !strcmp(face, "Tahoma");
-    for (int i = 0; i < 2; i++)
-        g_font[i] = CreateFontW(-px, 0, 0, 0, i ? FW_BOLD : FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                en && g_aa == 0 ? NONANTIALIASED_QUALITY : DEFAULT_QUALITY, DEFAULT_PITCH, (const wchar_t *)w8(face));
-    HDC dc = GetDC(g_hwnd); SelectObject(dc, g_font[0]); TEXTMETRICW tm; GetTextMetricsW(dc, &tm); g_text_h = tm.tmHeight; ReleaseDC(g_hwnd, dc);
-    for (int e = 0; e < EDIT_COUNT; e++) if (g_edit[e]) SendMessageW(g_edit[e], WM_SETFONT, (WPARAM)g_font[0], TRUE);
+    HDC dc = GetDC(g_hwnd); w2k_gdi_set_font(dc, (const wchar_t *)w8(face), px, en && g_aa == 0); ReleaseDC(g_hwnd, dc);
+    for (int e = 0; e < EDIT_COUNT; e++) if (g_edit[e]) SendMessageW(g_edit[e], WM_SETFONT, (WPARAM)w2k_gdi_font(0), TRUE);
 }
 static void h_quit(int code) { PostQuitMessage(code); }
 
@@ -93,7 +69,7 @@ static void paint(HWND hw) {
     PAINTSTRUCT ps; HDC dc = BeginPaint(hw, &ps);
     RECT rc; GetClientRect(hw, &rc); int W = rc.right, H = rc.bottom;
     HDC mem = CreateCompatibleDC(dc); HBITMAP bmp = CreateCompatibleBitmap(dc, W, H); HGDIOBJ old = SelectObject(mem, bmp);
-    gfx_t g = {mem, g_fill, g_gradient, g_text, g_text_w, g_clip, g_text_h};
+    w2k_gfx g = w2k_gdi_gfx(mem);
     app_paint(&g, W, H);
     BitBlt(dc, 0, 0, W, H, mem, 0, 0, SRCCOPY);
     SelectObject(mem, old); DeleteObject(bmp); DeleteDC(mem); EndPaint(hw, &ps);
@@ -120,7 +96,7 @@ static LRESULT CALLBACK wndproc(HWND hw, UINT m, WPARAM wp, LPARAM lp) {
             return HTCLIENT;
         }
         break;
-    case WM_GETMINMAXINFO: { MINMAXINFO *mi = (MINMAXINFO *)lp; mi->ptMinTrackSize.x = pxs(900); mi->ptMinTrackSize.y = pxs(560); return 0; }
+    case WM_GETMINMAXINFO: { MINMAXINFO *mi = (MINMAXINFO *)lp; mi->ptMinTrackSize.x = w2k_px(900); mi->ptMinTrackSize.y = w2k_px(560); return 0; }
     case WM_PAINT: paint(hw); return 0;
     case WM_ERASEBKGND: return 1;
     case WM_SIZE: InvalidateRect(hw, NULL, FALSE); return 0;

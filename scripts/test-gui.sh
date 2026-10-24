@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests of the Win32 GUI on Linux. The application (gui/app.c + skin.c) is platform independent: it talks to a host
+# Tests of the Win32 GUI on Linux. The application (gui/app.c + libw2k) is platform independent: it talks to a host
 # interface, so here a Linux host runs the SAME code against the real Go core on throw-away machines.
 #
 #   scripts/test-gui.sh              scripted UI journey (-selftest logic) + snapshot comparison with tests/snapshots
@@ -13,8 +13,9 @@ OUT=build/linux-test; mkdir -p "$OUT/obj"
 echo "== build the Linux test host"
 ( cd core && CGO_ENABLED=1 go build -buildmode=c-archive -trimpath -o ../$OUT/libafvi-core.a ./cmd/afvi-core-dll )
 python3 gui/gen_lang.py gui/lang gui/lang_data.c
-for f in app skin i18n util lang_data third_party/cJSON; do gcc -c -O2 -Wall -Wno-unused-function -Igui gui/$f.c -o $OUT/obj/$(basename $f).o; done
-gcc -O2 -Igui gui/preview/preview_main.c $OUT/obj/*.o $OUT/libafvi-core.a -lz -lpthread -lm -ldl -o $OUT/host
+for f in app i18n util lang_data third_party/cJSON; do gcc -c -O2 -Wall -Wno-unused-function -Igui -Ilibw2k gui/$f.c -o $OUT/obj/$(basename $f).o; done
+for f in w2k_draw w2k_ctl w2k_png; do gcc -c -O2 -Wall -Wno-unused-function -Ilibw2k libw2k/$f.c -o $OUT/obj/$f.o; done
+gcc -O2 -Igui -Ilibw2k gui/preview/preview_main.c $OUT/obj/*.o $OUT/libafvi-core.a -lz -lpthread -lm -ldl -o $OUT/host
 
 # a fixed path: it is shown in the status bar of the snapshots
 W=/tmp/afvi-gui-test

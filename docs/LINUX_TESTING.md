@@ -13,8 +13,8 @@ real Windows (see "What Linux cannot tell you"); it makes sure that almost every
 
 ## How it works (done)
 
-`gui/app.c` is platform independent: it talks to the outside through a `host_t` (native EDIT fields, calls into the core, timers, quit) and draws through `gfx_t`. Windows
-supplies those in `gui/win_main.c` (GDI, real window); Linux supplies them in `gui/preview/preview_main.c` (software canvas that writes PNG, a synchronous call into the
+`gui/app.c` is platform independent: it talks to the outside through a `host_t` (native EDIT fields, calls into the core, timers, quit) and draws through `w2k_gfx` (libw2k). Windows
+supplies those in `gui/win_main.c` (GDI, real window); Linux supplies them in `gui/preview/preview_main.c` (libw2k's `w2k_png` software canvas that writes PNG, a synchronous call into the
 **real Go core** built as a native c-archive, fixture machines in a temp directory). So the same application code runs on both. `scripts/test-gui.sh` builds that Linux
 host and runs:
 

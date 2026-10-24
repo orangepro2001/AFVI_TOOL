@@ -1,7 +1,7 @@
 /* Application logic of the Win32 front end (platform independent, see app.h). Everything the user sees is painted
  * here with the Windows 2000 skin; native windows exist only for the three EDIT fields (IME input). */
 #include "app.h"
-#include "skin.h"
+#include "w2k.h"
 #include "i18n.h"
 #include "util.h"
 #include "afvi_core.h"
@@ -34,7 +34,6 @@ enum { A_NONE, A_TAB0, A_TAB1, A_REFRESH, A_COPY, A_RENAME, A_MODE_SINGLE, A_MOD
        A_COMBO, A_MENU, A_POPITEM, A_CAP, A_EXPORT, A_HDR, A_ROW, A_DLG_RUN, A_DLG_CANCEL, A_DLG_CLOSE, A_DLG_OK, A_SCROLL };
 enum { CB_MACHINE, CB_NODE, CB_TSINGLE, CB_TGROUP };
 
-typedef struct { int x, y, w, h, act, arg; } Hot;
 
 static struct {
     host_t *h;
@@ -49,7 +48,7 @@ static struct {
     /* status */
     char st_key[32], st_arg[3][256]; int st_n;
     /* ui */
-    Hot hot[256]; int nhot; int pressed_hot;
+    w2k_hotlist hot; int pressed_hot;
     int modal, popup, popup_kind, popup_arg, popup_x, popup_y, popup_w;
     char version[32];
     /* dialogs */
@@ -104,8 +103,8 @@ static void show_msg(const char *title, const char *text) {
     cpy(S.dlg_title, sizeof S.dlg_title, title);
     lines_free(&S.dlg_lines);
     char *t = xstrdup(text), *p = t, *q;
-    while ((q = strchr(p, '\n'))) { *q = 0; lines_add(&S.dlg_lines, p, C_TEXT, 0, 0); p = q + 1; }
-    lines_add(&S.dlg_lines, p, C_TEXT, 0, 0);
+    while ((q = strchr(p, '\n'))) { *q = 0; lines_add(&S.dlg_lines, p, W2K_TEXT, 0, 0); p = q + 1; }
+    lines_add(&S.dlg_lines, p, W2K_TEXT, 0, 0);
     free(t);
     S.modal = M_MSG; S.popup = P_NONE; S.dlg_scroll = 0;
 }
@@ -226,16 +225,16 @@ static void build_plan_dialog(cJSON *plan) {
     cpy(S.plan_id, sizeof S.plan_id, jstr(plan, "id"));
     cJSON *bl = cJSON_GetObjectItemCaseSensitive(plan, "blockers"), *wa = cJSON_GetObjectItemCaseSensitive(plan, "warnings"), *un = cJSON_GetObjectItemCaseSensitive(plan, "units");
     char buf[1024];
-    for (int i = 0; i < cJSON_GetArraySize(bl); i++) { const char *a[1] = {cJSON_GetArrayItem(bl, i)->valuestring}; lines_add(&S.dlg_lines, u8w(TF("plan_blocker", 1, a)) , C_NG, 1, 0); }
-    for (int i = 0; i < cJSON_GetArraySize(wa); i++) { const char *a[1] = {cJSON_GetArrayItem(wa, i)->valuestring}; lines_add(&S.dlg_lines, u8w(TF("plan_warning", 1, a)), C_WARN, 0, 0); }
+    for (int i = 0; i < cJSON_GetArraySize(bl); i++) { const char *a[1] = {cJSON_GetArrayItem(bl, i)->valuestring}; lines_add(&S.dlg_lines, u8w(TF("plan_blocker", 1, a)) , W2K_NG, 1, 0); }
+    for (int i = 0; i < cJSON_GetArraySize(wa); i++) { const char *a[1] = {cJSON_GetArrayItem(wa, i)->valuestring}; lines_add(&S.dlg_lines, u8w(TF("plan_warning", 1, a)), W2K_WARN, 0, 0); }
     for (int u = 0; u < cJSON_GetArraySize(un); u++) {
         cJSON *U = cJSON_GetArrayItem(un, u), *tg = cJSON_GetObjectItemCaseSensitive(U, "target"), *st = cJSON_GetObjectItemCaseSensitive(U, "steps");
         snprintf(buf, sizeof buf, "[%s / %s]  %s", jstr(tg, "machine"), jstr(tg, "node"), jstr(U, "model"));
         if (strcmp(jstr(U, "model"), jstr(U, "newName"))) { size_t l = strlen(buf); snprintf(buf + l, sizeof buf - l, " -> %s", jstr(U, "newName")); }
-        lines_add(&S.dlg_lines, buf, C_TEXT, 1, 0);
+        lines_add(&S.dlg_lines, buf, W2K_TEXT, 1, 0);
         for (int k = 0; k < cJSON_GetArraySize(st); k++) {
             cJSON *s = cJSON_GetArrayItem(st, k);
-            lines_add(&S.dlg_lines, jstr(s, "text"), cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(s, "danger")) ? C_NG : C_TEXT, 0, 1);
+            lines_add(&S.dlg_lines, jstr(s, "text"), cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(s, "danger")) ? W2K_NG : W2K_TEXT, 0, 1);
         }
     }
     S.dlg_can_run = cJSON_GetArraySize(bl) == 0;
@@ -261,7 +260,7 @@ static void job_apply(cJSON *j) {
     { char *u = u8w(TF("job_counts", 5, a)); cpy(S.job_counts, sizeof S.job_counts, u); free(u); }
     S.job_pct = jnum(p, "bytesTotal") > 0 ? (int)(100 * jnum(p, "bytesDone") / jnum(p, "bytesTotal")) : jnum(p, "filesTotal") > 0 ? (int)(100 * jnum(p, "filesDone") / jnum(p, "filesTotal")) : 0;
     S.job_committed = jint(p, "committed");
-    for (int i = S.job_log.n; i < cJSON_GetArraySize(lg); i++) lines_add(&S.job_log, cJSON_GetArrayItem(lg, i)->valuestring, C_TEXT, 0, 0);
+    for (int i = S.job_log.n; i < cJSON_GetArraySize(lg); i++) lines_add(&S.job_log, cJSON_GetArrayItem(lg, i)->valuestring, W2K_TEXT, 0, 0);
     S.job_running = !strcmp(state, "running");
     if (!S.job_running) {
         S.job_done = 1; S.job_failed = strcmp(state, "done") != 0;
@@ -350,57 +349,26 @@ void app_on_result(int id, const char *json) {
 /* ======================================================================================================
  * painting
  * ==================================================================================================== */
-static gfx_t *G;
-static int th(void) { return G ? G->text_h : 16; }
-static int tw(const wchar_t *s, int bold) { return G->text_w(G->ctx, s, (int)wcslen(s), bold); }
-static void txt(int x, int y, const wchar_t *s, uint32_t c, int bold) { G->text(G->ctx, x, y, s, (int)wcslen(s), c, bold); }
-static void fillr(int x, int y, int w, int h, uint32_t c) { if (w > 0 && h > 0) G->fill(G->ctx, x, y, w, h, c); }
-static void hot_add(int x, int y, int w, int h, int act, int arg) {
-    if (S.nhot < 256) { Hot *t = &S.hot[S.nhot++]; t->x = x; t->y = y; t->w = w; t->h = h; t->act = act; t->arg = arg; }
-}
-
-/* word wrap into at most max pieces: start offsets and lengths */
-static int wrap(const wchar_t *s, int width, int bold, int *st, int *ln, int max) {
-    int n = 0, len = (int)wcslen(s), i = 0;
-    while (i < len && n < max) {
-        int j = i, last_sp = -1, w = 0;
-        while (j < len) {
-            int cw = G->text_w(G->ctx, s + j, 1, bold);
-            if (w + cw > width && j > i) break;
-            if (s[j] == L' ') last_sp = j;
-            w += cw; j++;
-        }
-        int end = j;
-        if (j < len && last_sp > i) end = last_sp + 1;
-        st[n] = i; ln[n] = end - i; n++;
-        i = end;
-    }
-    if (!n) { st[0] = 0; ln[0] = 0; n = 1; }
-    return n;
-}
-static int draw_wrapped(int x, int y, int w, const wchar_t *s, uint32_t c, int bold) {
-    int st[64], ln[64], n = wrap(s, w, bold, st, ln, 64);
-    for (int i = 0; i < n; i++) G->text(G->ctx, x, y + i * (th() + 1), s + st[i], ln[i], c, bold);
-    return n * (th() + 1);
-}
-static int wrapped_h(int w, const wchar_t *s) { int st[64], ln[64]; return wrap(s, w, 0, st, ln, 64) * (th() + 1); }
+static const w2k_gfx *G;
+static int th(void) { return w2k_th(G); }
+static int tw(const wchar_t *s, int bold) { return w2k_tw(G, s, bold); }
+static void txt(int x, int y, const wchar_t *s, uint32_t c, int bold) { w2k_txt(G, x, y, s, c, bold); }
+static void fillr(int x, int y, int w, int h, uint32_t c) { w2k_fillr(G, x, y, w, h, c); }
+static void hot_add(int x, int y, int w, int h, int act, int arg) { w2k_hot_add(&S.hot, x, y, w, h, act, arg); }
+static int draw_wrapped(int x, int y, int w, const wchar_t *s, uint32_t c, int bold) { return w2k_draw_wrapped(G, x, y, w, s, c, bold); }
+static int wrapped_h(int w, const wchar_t *s) { return w2k_wrapped_h(G, w, s); }
 
 static void place_edit(int e, int x, int y, int w, int h, int visible) {
-    skin_field(G, x, y, w, h);
-    if (S.draw_edit_text) { G->clip(G->ctx, x + 3, y + 2, w - 6, h - 4); txt(x + 4, y + (h - th()) / 2, edit_cache[e], C_TEXT, 0); G->clip(G->ctx, 0, 0, 0, 0); }
+    w2k_draw_field(G, x, y, w, h);
+    if (S.draw_edit_text) { G->clip(G->ctx, x + 3, y + 2, w - 6, h - 4); txt(x + 4, y + (h - th()) / 2, edit_cache[e], W2K_TEXT, 0); G->clip(G->ctx, 0, 0, 0, 0); }
     S.h->edit_place(e, x + 3, y + 3, w - 6, h - 6, visible);
 }
 
 static void radio_row(int x, int y, int checked, int act, const wchar_t *label, int disabled) {
-    skin_check(G, x, y + (th() + 2 - pxs(13)) / 2, checked, disabled, 1);
-    txt(x + pxs(13) + pxs(6), y, label, C_TEXT, 0);
-    hot_add(x, y, pxs(13) + pxs(10) + tw(label, 0), th() + 2, act, 0);
+    w2k_choice(G, &S.hot, x, y, 0, checked, 1, disabled, label, act, 0);
 }
 
-static void combo(int x, int y, int w, int h, const wchar_t *text, int cb, int disabled) {
-    skin_combo(G, x, y, w, h, text, disabled);
-    if (!disabled) hot_add(x, y, w, h, A_COMBO, cb);
-}
+static void combo(int x, int y, int w, int h, const wchar_t *text, int cb, int disabled) { w2k_combo(G, &S.hot, x, y, w, h, text, A_COMBO, cb, disabled); }
 
 static const wchar_t *combo_text(int cb, int i) {
     static wchar_t buf[300]; char tmp[300];
@@ -415,113 +383,93 @@ static const wchar_t *combo_text(int cb, int i) {
 static int combo_count(int cb) { return cb == CB_MACHINE ? S.nmach : cb == CB_NODE ? 3 : cb == CB_TSINGLE ? S.nsingle : S.ngroup; }
 static int combo_cur(int cb) { return cb == CB_MACHINE ? S.mach : cb == CB_NODE ? S.node : cb == CB_TSINGLE ? S.tsingle : S.tgroup; }
 
-static void paint_list(int x, int y, int w, int h) {
-    fillr(x, y, w, h, C_FIELD); skin_edge(G, x, y, w, h, SKE_SUNKEN);
-    int ix = x + 2, iy = y + 2, iw = w - 4, ih = h - 4, hh = th() + pxs(6), rh = th() + 3;
-    int page = (ih - hh) / rh; if (page < 1) page = 1;
-    int sbw = S.nvis > page ? pxs(16) : 0;
-    int cw[7] = {0, pxs(56), pxs(96), pxs(44), pxs(108), pxs(88), pxs(124)};
-    int fixed = 0; for (int i = 1; i < 7; i++) fixed += cw[i];
-    cw[0] = iw - sbw - fixed; if (cw[0] < pxs(120)) cw[0] = pxs(120);
-    const wchar_t *hd[7] = {T("col_model"), T("col_class"), L"PxRepository", L".his", L"INSPECT_SPEC", L"LIGHT_SPEC", T("col_modified")};
-    G->clip(G->ctx, ix, iy, iw - sbw, ih);
-    int cx = ix;
-    for (int i = 0; i < 7; i++) {
-        skin_header_cell(G, cx, iy, cw[i], hh, hd[i]);
-        G->clip(G->ctx, ix, iy, iw - sbw, ih);
-        hot_add(cx, iy, cw[i], hh, A_HDR, i);
-        cx += cw[i];
-    }
-    if (S.scroll > S.nvis - page) S.scroll = S.nvis - page;
-    if (S.scroll < 0) S.scroll = 0;
+static const wchar_t *list_cell(void *ud, int vi, int col) {
+    static wchar_t buf[2][160]; (void)ud;
+    Row *R = &S.rows[S.vis[vi]];
     const wchar_t *yes = T("yes_mark"), *no = T("no_mark");
-    for (int r = 0; r < page && S.scroll + r < S.nvis; r++) {
-        int vi = S.scroll + r, ry = iy + hh + r * rh; Row *R = &S.rows[S.vis[vi]];
-        if (vi == S.sel_vis) fillr(ix, ry, iw - sbw, rh, C_ROW_SEL);
-        else if (r & 1) fillr(ix, ry, iw - sbw, rh, C_ROW_ALT);
-        wchar_t ins[16]; if (R->insp) swprintf(ins, 16, L"%d", R->insp); else wcscpy(ins, no);
-        char mod[32] = ""; if (strlen(R->mod) >= 16) { snprintf(mod, sizeof mod, "%.10s %.5s", R->mod, R->mod + 11); }
-        const wchar_t *cell[7] = {w8(R->name), w8(R->cls), R->repo ? yes : no, R->his ? yes : no, ins, R->light ? yes : no, w8(mod)};
-        cx = ix;
-        for (int i = 0; i < 7; i++) { G->clip(G->ctx, cx + 1, ry, cw[i] - 2, rh); txt(cx + 6, ry + 1, cell[i], C_TEXT, 0); cx += cw[i]; }
-        G->clip(G->ctx, ix, iy, iw - sbw, ih);
-        hot_add(ix, ry, iw - sbw, rh, A_ROW, vi);
+    switch (col) {
+    case 0: return w8(R->name);
+    case 1: return w8(R->cls);
+    case 2: return R->repo ? yes : no;
+    case 3: return R->his ? yes : no;
+    case 4: if (R->insp) { swprintf(buf[0], 16, L"%d", R->insp); return buf[0]; } return no;
+    case 5: return R->light ? yes : no;
+    default: { char mod[32] = ""; if (strlen(R->mod) >= 16) snprintf(mod, sizeof mod, "%.10s %.5s", R->mod, R->mod + 11); return w8(mod); }
     }
-    G->clip(G->ctx, 0, 0, 0, 0);
-    if (sbw) { skin_scrollbar(G, ix + iw - sbw, iy + hh, sbw, ih - hh, S.scroll, page, S.nvis); hot_add(ix + iw - sbw, iy + hh, sbw, ih - hh, A_SCROLL, 0); }
 }
 
-static int group_title_h(void) { return th() + pxs(6); }
+static void paint_list(int x, int y, int w, int h) {
+    static const int col_px[7] = {120, 56, 96, 44, 108, 88, 124};
+    const wchar_t *hd[7] = {T("col_model"), T("col_class"), L"PxRepository", L".his", L"INSPECT_SPEC", L"LIGHT_SPEC", T("col_modified")};
+    w2k_list L = {7, col_px, hd, S.nvis, list_cell, NULL, S.sel_vis, &S.scroll, A_HDR, A_ROW, A_SCROLL};
+    w2k_list_paint(G, &S.hot, x, y, w, h, &L);
+}
+
+static int group_title_h(void) { return th() + w2k_px(6); }
 
 static void paint_copy_page(int px, int py, int pw, int ph) {
-    int pad = pxs(4), rw = pxs(340), gap = pxs(6);
+    int pad = w2k_px(4), rw = w2k_px(340), gap = w2k_px(6);
     int lx = px, lw = pw - rw - gap, rx = px + lw + gap;
-    int ch = th() + pxs(8);                                    /* control height */
+    int ch = th() + w2k_px(8);                                    /* control height */
     /* source group */
-    int gh = group_title_h() + ch + pxs(12);
-    skin_group(G, lx, py, lw, gh, T("gb_source"));
-    int cy = py + group_title_h() + pxs(2), cx = lx + pxs(10);
+    int gh = group_title_h() + ch + w2k_px(12);
+    w2k_draw_group(G, lx, py, lw, gh, T("gb_source"));
+    int cy = py + group_title_h() + w2k_px(2), cx = lx + w2k_px(10);
     const wchar_t *l1 = T("lbl_machine"), *l2 = T("lbl_node");
-    txt(cx, cy + (ch - th()) / 2, l1, C_TEXT, 0); cx += tw(l1, 0) + pxs(6);
-    combo(cx, cy, pxs(150), ch, combo_text(CB_MACHINE, S.mach), CB_MACHINE, 0); cx += pxs(150) + pxs(14);
-    txt(cx, cy + (ch - th()) / 2, l2, C_TEXT, 0); cx += tw(l2, 0) + pxs(6);
-    combo(cx, cy, pxs(86), ch, combo_text(CB_NODE, S.node), CB_NODE, 0); cx += pxs(86) + pxs(14);
-    int bw = pxs(80), ex = cx, ew = lx + lw - pxs(10) - bw - pxs(8) - ex;
-    place_edit(EDIT_SEARCH, ex, cy, ew > pxs(60) ? ew : pxs(60), ch, !S.modal && !S.popup);
-    skin_button(G, lx + lw - pxs(10) - bw, cy, bw, ch, T("btn_refresh"), S.pressed_hot == A_REFRESH, 0, 0, 0);
-    hot_add(lx + lw - pxs(10) - bw, cy, bw, ch, A_REFRESH, 0);
+    txt(cx, cy + (ch - th()) / 2, l1, W2K_TEXT, 0); cx += tw(l1, 0) + w2k_px(6);
+    combo(cx, cy, w2k_px(150), ch, combo_text(CB_MACHINE, S.mach), CB_MACHINE, 0); cx += w2k_px(150) + w2k_px(14);
+    txt(cx, cy + (ch - th()) / 2, l2, W2K_TEXT, 0); cx += tw(l2, 0) + w2k_px(6);
+    combo(cx, cy, w2k_px(86), ch, combo_text(CB_NODE, S.node), CB_NODE, 0); cx += w2k_px(86) + w2k_px(14);
+    int bw = w2k_px(80), ex = cx, ew = lx + lw - w2k_px(10) - bw - w2k_px(8) - ex;
+    place_edit(EDIT_SEARCH, ex, cy, ew > w2k_px(60) ? ew : w2k_px(60), ch, !S.modal && !S.popup);
+    w2k_button(G, &S.hot, lx + lw - w2k_px(10) - bw, cy, bw, ch, T("btn_refresh"), A_REFRESH, 0, S.pressed_hot == A_REFRESH ? W2K_PRESSED : 0);
     /* list */
-    paint_list(lx, py + gh + pxs(6), lw, ph - gh - pxs(6));
+    paint_list(lx, py + gh + w2k_px(6), lw, ph - gh - w2k_px(6));
 
     /* right column */
     int y = py, gw = rw;
-    int in = rx + pxs(10), iw = gw - pxs(20);
+    int in = rx + w2k_px(10), iw = gw - w2k_px(20);
     /* copy */
-    int copy_top = y; y += group_title_h() + pxs(2);
+    int copy_top = y; y += group_title_h() + w2k_px(2);
     char src[300]; snprintf(src, sizeof src, "%s / %s", S.mach < S.nmach && S.nmach ? S.machines[S.mach] : "", node_name(S.node));
-    { const char *a[1] = {src}; txt(in, y, TF("lbl_source_is", 1, a), C_TEXT_DIM, 0); } y += th() + pxs(6);
-    radio_row(in, y, !S.mode_group, A_MODE_SINGLE, T("rb_single"), !S.nsingle); y += th() + pxs(6);
-    combo(in + pxs(18), y, iw - pxs(18), ch, combo_text(CB_TSINGLE, S.tsingle), CB_TSINGLE, S.mode_group || !S.nsingle); y += ch + pxs(6);
-    radio_row(in, y, S.mode_group, A_MODE_GROUP, T("rb_group"), !S.ngroup); y += th() + pxs(6);
-    combo(in + pxs(18), y, iw - pxs(18), ch, combo_text(CB_TGROUP, S.tgroup), CB_TGROUP, !S.mode_group || !S.ngroup); y += ch + pxs(8);
-    { const wchar_t *l = T("lbl_newname_opt"); txt(in, y + (ch - th()) / 2, l, C_TEXT, 0); int ex2 = in + tw(l, 0) + pxs(6);
-      place_edit(EDIT_COPYNAME, ex2, y, in + iw - ex2, ch, !S.modal && !S.popup); } y += ch + pxs(6);
-    y += draw_wrapped(in, y, iw, T("note_copy"), C_TEXT_DIM, 0) + pxs(6);
+    { const char *a[1] = {src}; txt(in, y, TF("lbl_source_is", 1, a), W2K_TEXT_DIM, 0); } y += th() + w2k_px(6);
+    radio_row(in, y, !S.mode_group, A_MODE_SINGLE, T("rb_single"), !S.nsingle); y += th() + w2k_px(6);
+    combo(in + w2k_px(18), y, iw - w2k_px(18), ch, combo_text(CB_TSINGLE, S.tsingle), CB_TSINGLE, S.mode_group || !S.nsingle); y += ch + w2k_px(6);
+    radio_row(in, y, S.mode_group, A_MODE_GROUP, T("rb_group"), !S.ngroup); y += th() + w2k_px(6);
+    combo(in + w2k_px(18), y, iw - w2k_px(18), ch, combo_text(CB_TGROUP, S.tgroup), CB_TGROUP, !S.mode_group || !S.ngroup); y += ch + w2k_px(8);
+    { const wchar_t *l = T("lbl_newname_opt"); txt(in, y + (ch - th()) / 2, l, W2K_TEXT, 0); int ex2 = in + tw(l, 0) + w2k_px(6);
+      place_edit(EDIT_COPYNAME, ex2, y, in + iw - ex2, ch, !S.modal && !S.popup); } y += ch + w2k_px(6);
+    y += draw_wrapped(in, y, iw, T("note_copy"), W2K_TEXT_DIM, 0) + w2k_px(6);
     int canCopy = S.sel_vis >= 0 && !S.busy && (S.mode_group ? S.ngroup : S.nsingle);
-    skin_button(G, in + iw - pxs(96), y, pxs(96), ch, T("btn_copy"), S.pressed_hot == A_COPY, !canCopy, 0, 0);
-    if (canCopy) hot_add(in + iw - pxs(96), y, pxs(96), ch, A_COPY, 0);
-    y += ch + pxs(10);
-    skin_group(G, rx, copy_top, gw, y - copy_top, T("gb_copy")); y += pxs(6);
+    w2k_button(G, &S.hot, in + iw - w2k_px(96), y, w2k_px(96), ch, T("btn_copy"), A_COPY, 0, (S.pressed_hot == A_COPY ? W2K_PRESSED : 0) | (canCopy ? 0 : W2K_DISABLED));
+    y += ch + w2k_px(10);
+    w2k_draw_group(G, rx, copy_top, gw, y - copy_top, T("gb_copy")); y += w2k_px(6);
     /* rename */
-    int ren_top = y; y += group_title_h() + pxs(2);
-    skin_check(G, in, y + (th() + 2 - pxs(13)) / 2, S.rename_group, 0, 0);
-    txt(in + pxs(19), y, T("chk_rename_group"), C_TEXT, 0);
-    hot_add(in, y, iw, th() + 2, A_CHK_RENAME, 0); y += th() + pxs(8);
-    { const wchar_t *l = T("lbl_newname"); txt(in, y + (ch - th()) / 2, l, C_TEXT, 0); int ex2 = in + tw(l, 0) + pxs(6);
-      place_edit(EDIT_RENAME, ex2, y, in + iw - ex2, ch, !S.modal && !S.popup); } y += ch + pxs(8);
+    int ren_top = y; y += group_title_h() + w2k_px(2);
+    w2k_choice(G, &S.hot, in, y, iw, S.rename_group, 0, 0, T("chk_rename_group"), A_CHK_RENAME, 0); y += th() + w2k_px(8);
+    { const wchar_t *l = T("lbl_newname"); txt(in, y + (ch - th()) / 2, l, W2K_TEXT, 0); int ex2 = in + tw(l, 0) + w2k_px(6);
+      place_edit(EDIT_RENAME, ex2, y, in + iw - ex2, ch, !S.modal && !S.popup); } y += ch + w2k_px(8);
     int canRen = S.sel_vis >= 0 && !S.busy;
-    skin_button(G, in + iw - pxs(96), y, pxs(96), ch, T("btn_rename"), S.pressed_hot == A_RENAME, !canRen, 0, 0);
-    if (canRen) hot_add(in + iw - pxs(96), y, pxs(96), ch, A_RENAME, 0);
-    y += ch + pxs(10);
-    skin_group(G, rx, ren_top, gw, y - ren_top, T("gb_rename")); y += pxs(6);
+    w2k_button(G, &S.hot, in + iw - w2k_px(96), y, w2k_px(96), ch, T("btn_rename"), A_RENAME, 0, (S.pressed_hot == A_RENAME ? W2K_PRESSED : 0) | (canRen ? 0 : W2K_DISABLED));
+    y += ch + w2k_px(10);
+    w2k_draw_group(G, rx, ren_top, gw, y - ren_top, T("gb_rename")); y += w2k_px(6);
     /* rules */
-    int rules_top = y; y += group_title_h() + pxs(2);
+    int rules_top = y; y += group_title_h() + w2k_px(2);
     const char *rk[4] = {"rule_1", "rule_2", "rule_3", "rule_4"};
-    for (int i = 0; i < 4; i++) y += draw_wrapped(in, y, iw, T(rk[i]), C_TEXT_DIM, 0) + 2;
-    y += pxs(6);
-    skin_group(G, rx, rules_top, gw, y - rules_top, T("gb_rules"));
+    for (int i = 0; i < 4; i++) y += draw_wrapped(in, y, iw, T(rk[i]), W2K_TEXT_DIM, 0) + 2;
+    y += w2k_px(6);
+    w2k_draw_group(G, rx, rules_top, gw, y - rules_top, T("gb_rules"));
     (void)pad; (void)ph;
 }
 
 static void paint_export_page(int px, int py, int pw, int ph) {
-    int w = pxs(520) < pw ? pxs(520) : pw, ch = th() + pxs(8);
-    int tl = wrapped_h(w - pxs(20), T("export_page_text"));
-    int h = group_title_h() + pxs(4) + tl + pxs(10) + ch + pxs(12);
-    int y = py + group_title_h() + pxs(4);
-    draw_wrapped(px + pxs(10), y, w - pxs(20), T("export_page_text"), C_TEXT, 0); y += tl + pxs(10);
-    skin_button(G, px + pxs(10), y, pxs(96), ch, T("btn_export"), S.pressed_hot == A_EXPORT, 0, 0, 0);
-    hot_add(px + pxs(10), y, pxs(96), ch, A_EXPORT, 0);
-    skin_group(G, px, py, w, h, T("gb_export"));
+    int w = w2k_px(520) < pw ? w2k_px(520) : pw, ch = th() + w2k_px(8);
+    int tl = wrapped_h(w - w2k_px(20), T("export_page_text"));
+    int h = group_title_h() + w2k_px(4) + tl + w2k_px(10) + ch + w2k_px(12);
+    int y = py + group_title_h() + w2k_px(4);
+    draw_wrapped(px + w2k_px(10), y, w - w2k_px(20), T("export_page_text"), W2K_TEXT, 0); y += tl + w2k_px(10);
+    w2k_button(G, &S.hot, px + w2k_px(10), y, w2k_px(96), ch, T("btn_export"), A_EXPORT, 0, S.pressed_hot == A_EXPORT ? W2K_PRESSED : 0);
+    w2k_draw_group(G, px, py, w, h, T("gb_export"));
     (void)ph;
     S.h->edit_place(EDIT_SEARCH, 0, 0, 0, 0, 0); S.h->edit_place(EDIT_COPYNAME, 0, 0, 0, 0, 0); S.h->edit_place(EDIT_RENAME, 0, 0, 0, 0, 0);
 }
@@ -535,7 +483,7 @@ static int menu_items(int m, MItem *o) {
     else if (m == 1) {
         static const int sizes[6] = {12, 13, 14, 16, 18, 20};
         ADD(T("menu_fontsize"), 0, 0, 0);
-        for (int i = 0; i < 6; i++) { wchar_t b[40]; swprintf(b, 40, L"   %d", sizes[i]); ADD(b, MC_FONT + sizes[i], sizes[i] == skin_font_px, 0); }
+        for (int i = 0; i < 6; i++) { wchar_t b[40]; swprintf(b, 40, L"   %d", sizes[i]); ADD(b, MC_FONT + sizes[i], sizes[i] == w2k_font_px, 0); }
         ADD(L"", 0, 0, 1); ADD(T("menu_language"), 0, 0, 0);
         for (int i = 0; i < i18n_count(); i++) { wchar_t b[60]; swprintf(b, 60, L"   %ls", w8(i18n_native_name(i))); ADD(b, MC_LANG + i, !strcmp(i18n_tag_at(i), i18n_tag()), 0); }
     }
@@ -545,106 +493,65 @@ static int menu_items(int m, MItem *o) {
     return n;
 }
 
+static const wchar_t *combo_text_fn(void *ud, int i) { return combo_text(*(int *)ud, i); }
+
 static void paint_popup(int W, int H) {
-    int rh = th() + pxs(6), x = S.popup_x, y = S.popup_y;
     if (S.popup == P_MENU) {
-        MItem it[16]; int n = menu_items(S.popup_arg, it), w = pxs(150);
-        for (int i = 0; i < n; i++) { int t = tw(it[i].text, 0) + pxs(40); if (t > w) w = t; }
-        int h = 4; for (int i = 0; i < n; i++) h += it[i].sep ? 6 : rh;
-        fillr(x, y, w, h, C_FACE); skin_edge(G, x, y, w, h, SKE_RAISED);
-        int yy = y + 2;
-        for (int i = 0; i < n; i++) {
-            if (it[i].sep) { fillr(x + 3, yy + 2, w - 6, 1, C_SHADOW); fillr(x + 3, yy + 3, w - 6, 1, C_HIGHLIGHT); yy += 6; continue; }
-            if (it[i].checked) txt(x + 6, yy + 3, L"•", C_TEXT, 0);
-            txt(x + pxs(20), yy + 3, it[i].text, it[i].code ? C_TEXT : C_TEXT_DIM, 0);
-            if (it[i].code) hot_add(x + 2, yy, w - 4, rh, A_POPITEM, it[i].code);
-            yy += rh;
-        }
-        hot_add(0, 0, W, H, A_NONE, -1);              /* a click anywhere else closes it */
+        MItem it[16]; w2k_menu_item mi[16]; int n = menu_items(S.popup_arg, it);
+        for (int i = 0; i < n; i++) { mi[i].text = it[i].text; mi[i].code = it[i].code; mi[i].checked = it[i].checked; mi[i].sep = it[i].sep; }
+        w2k_popup_menu(G, &S.hot, W, H, S.popup_x, S.popup_y, mi, n, A_POPITEM, A_NONE);
     } else if (S.popup == P_COMBO) {
-        int n = combo_count(S.popup_arg), w = S.popup_w, h = n * rh + 4;
-        for (int i = 0; i < n; i++) { int t = tw(combo_text(S.popup_arg, i), 0) + pxs(16); if (t > w) w = t; }
-        fillr(x, y, w, h, C_FIELD); skin_edge(G, x, y, w, h, SKE_WINDOW);
-        for (int i = 0; i < n; i++) {
-            int yy = y + 2 + i * rh;
-            if (i == combo_cur(S.popup_arg)) { fillr(x + 2, yy, w - 4, rh, C_SELECT); txt(x + 6, yy + 3, combo_text(S.popup_arg, i), 0xFFFFFF, 0); }
-            else txt(x + 6, yy + 3, combo_text(S.popup_arg, i), C_TEXT, 0);
-            hot_add(x + 2, yy, w - 4, rh, A_POPITEM, i);
-        }
-        hot_add(0, 0, W, H, A_NONE, -1);
+        int cb = S.popup_arg;
+        w2k_droplist(G, &S.hot, W, H, S.popup_x, S.popup_y, S.popup_w, combo_text_fn, &cb, combo_count(cb), combo_cur(cb), A_POPITEM, A_NONE);
     }
 }
 
-/* visual lines of the dialog text (wrapped) */
-typedef struct { const wchar_t *s; int n; uint32_t c; int bold, indent; } VLine;
-static VLine *vl; static int vl_n, vl_cap;
-static void vl_build(const Lines *L, int width) {
-    vl_n = 0;
-    for (int i = 0; i < L->n; i++) {
-        const wchar_t *s = w8(L->v[i].text); int ind = L->v[i].indent * pxs(16);
-        wchar_t *copy = (wchar_t *)malloc((wcslen(s) + 1) * sizeof(wchar_t)); wcscpy(copy, s);   /* w8 buffers rotate: keep our own */
-        int st[128], ln[128], n = wrap(copy, width - ind, L->v[i].bold, st, ln, 128);
-        for (int k = 0; k < n; k++) {
-            if (vl_n == vl_cap) { vl_cap = vl_cap ? vl_cap * 2 : 128; vl = (VLine *)realloc(vl, vl_cap * sizeof(VLine)); }
-            vl[vl_n].s = copy + st[k]; vl[vl_n].n = ln[k]; vl[vl_n].c = L->v[i].color; vl[vl_n].bold = L->v[i].bold; vl[vl_n].indent = ind; vl_n++;
-        }
-    }
-}
-static void vl_free(void) { /* the copies are tiny and freed with the process; keep a simple arena-free design */ vl_n = 0; }
-
+/* the dialog text: utf-8 lines -> wide copies (w8 buffers rotate) -> w2k_textview */
 static void paint_text_area(int x, int y, int w, int h, const Lines *L, int *scroll, int stick_bottom) {
-    fillr(x, y, w, h, C_FIELD); skin_edge(G, x, y, w, h, SKE_SUNKEN);
-    int sbw = pxs(16), lh = th() + 1, page = (h - 6) / lh; if (page < 1) page = 1;
-    vl_build(L, w - 8 - sbw);
-    if (stick_bottom && vl_n > page) *scroll = vl_n - page;
-    if (*scroll > vl_n - page) *scroll = vl_n - page;
-    if (*scroll < 0) *scroll = 0;
-    G->clip(G->ctx, x + 2, y + 2, w - 4 - sbw, h - 4);
-    for (int i = 0; i < page && *scroll + i < vl_n; i++) {
-        VLine *v = &vl[*scroll + i];
-        G->text(G->ctx, x + 4 + v->indent, y + 3 + i * lh, v->s, v->n, v->c, v->bold);
+    w2k_line *ln = (w2k_line *)calloc(L->n + 1, sizeof(w2k_line));
+    for (int i = 0; i < L->n; i++) {
+        const wchar_t *s = w8(L->v[i].text); wchar_t *copy = (wchar_t *)malloc((wcslen(s) + 1) * sizeof(wchar_t)); wcscpy(copy, s);
+        ln[i].text = copy; ln[i].rgb = L->v[i].color; ln[i].bold = L->v[i].bold; ln[i].indent = L->v[i].indent;
     }
-    G->clip(G->ctx, 0, 0, 0, 0);
-    if (vl_n > page) skin_scrollbar(G, x + w - sbw - 2, y + 2, sbw, h - 4, *scroll, page, vl_n);
-    vl_free();
+    w2k_textview(G, x, y, w, h, ln, L->n, scroll, stick_bottom);
+    for (int i = 0; i < L->n; i++) free((void *)ln[i].text);
+    free(ln);
 }
 
 static void paint_modal(int W, int H) {
-    int ch = th() + pxs(8), bw = pxs(96);
-    int dw = W - 2 * pxs(30); if (dw > pxs(760)) dw = pxs(760);
-    int dh = H - 2 * pxs(30); if (dh > pxs(480)) dh = pxs(480);
-    if (S.modal == M_MSG) { dh = pxs(60) + (S.dlg_lines.n + 1) * (th() + 2) + ch + pxs(40); if (dh > H - 2 * pxs(30)) dh = H - 2 * pxs(30); if (dw > pxs(560)) dw = pxs(560); }
+    int ch = th() + w2k_px(8), bw = w2k_px(96);
+    int dw = W - 2 * w2k_px(30); if (dw > w2k_px(760)) dw = w2k_px(760);
+    int dh = H - 2 * w2k_px(30); if (dh > w2k_px(480)) dh = w2k_px(480);
+    if (S.modal == M_MSG) { dh = w2k_px(60) + (S.dlg_lines.n + 1) * (th() + 2) + ch + w2k_px(40); if (dh > H - 2 * w2k_px(30)) dh = H - 2 * w2k_px(30); if (dw > w2k_px(560)) dw = w2k_px(560); }
     int dx = (W - dw) / 2, dy = (H - dh) / 2;
-    fillr(dx, dy, dw, dh, C_FACE); skin_edge(G, dx, dy, dw, dh, SKE_WINDOW);
-    int capH = th() + pxs(6);
     const wchar_t *title = S.modal == M_JOB ? (S.job_done ? T(S.job_failed ? "job_failed" : "job_done") : T("job_running")) : S.modal == M_PLAN ? T("plan_title") : T("dlg_error");
     if (S.modal == M_MSG && !strcmp(S.dlg_title, "")) title = L"";
-    skin_caption(G, dx + 3, dy + 3, dw - 6, capH, S.modal == M_MSG ? w8(S.dlg_title) : title, 1);
-    int by = dy + dh - pxs(10) - ch, bx = dx + dw - pxs(14) - bw;
-    int x = dx + pxs(14), w = dw - pxs(28), y = dy + 3 + capH + pxs(10);
+    int capH = w2k_dialog_frame(G, dx, dy, dw, dh, S.modal == M_MSG ? w8(S.dlg_title) : title);
+    int by = dy + dh - w2k_px(10) - ch, bx = dx + dw - w2k_px(14) - bw;
+    int x = dx + w2k_px(14), w = dw - w2k_px(28), y = dy + 3 + capH + w2k_px(10);
     if (S.modal == M_PLAN) {
-        txt(x, y, w8(S.dlg_title), C_TEXT, 1); y += th() + pxs(8);
-        paint_text_area(x, y, w, by - pxs(10) - y, &S.dlg_lines, &S.dlg_scroll, 0);
-        hot_add(x, y, w, by - pxs(10) - y, A_SCROLL, 1);
-        skin_button(G, bx, by, bw, ch, T("btn_cancel"), 0, 0, 0, 0); hot_add(bx, by, bw, ch, A_DLG_CANCEL, 0);
-        bx -= bw + pxs(8);
-        skin_button(G, bx, by, bw, ch, T("btn_run"), 0, !S.dlg_can_run, 1, S.dlg_can_run); if (S.dlg_can_run) hot_add(bx, by, bw, ch, A_DLG_RUN, 0);
-        txt(x, by + (ch - th()) / 2, w8(S.dlg_summary), C_TEXT_DIM, 0);
+        txt(x, y, w8(S.dlg_title), W2K_TEXT, 1); y += th() + w2k_px(8);
+        paint_text_area(x, y, w, by - w2k_px(10) - y, &S.dlg_lines, &S.dlg_scroll, 0);
+        hot_add(x, y, w, by - w2k_px(10) - y, A_SCROLL, 1);
+        w2k_button(G, &S.hot, bx, by, bw, ch, T("btn_cancel"), A_DLG_CANCEL, 0, 0);
+        bx -= bw + w2k_px(8);
+        w2k_button(G, &S.hot, bx, by, bw, ch, T("btn_run"), A_DLG_RUN, 0, W2K_DEFAULT | (S.dlg_can_run ? W2K_FOCUS : W2K_DISABLED));
+        txt(x, by + (ch - th()) / 2, w8(S.dlg_summary), W2K_TEXT_DIM, 0);
     } else if (S.modal == M_JOB) {
-        txt(x, y, w8(S.dlg_title), C_TEXT, 1); y += th() + pxs(8);
-        txt(x, y, w8(S.job_phase), C_TEXT, 0); y += th() + pxs(6);
-        skin_progress(G, x, y, w, pxs(18), S.job_pct); y += pxs(18) + pxs(6);
-        txt(x, y, w8(S.job_counts), C_TEXT_DIM, 0); y += th() + 2;
-        G->clip(G->ctx, x, y, w, th() + 2); txt(x, y, w8(S.job_current), C_TEXT_DIM, 0); G->clip(G->ctx, 0, 0, 0, 0); y += th() + pxs(8);
-        int resh = S.job_result[0] ? th() + pxs(6) : 0;
-        paint_text_area(x, y, w, by - pxs(10) - resh - y, &S.job_log, &S.dlg_scroll, 1);
-        if (S.job_result[0]) txt(x, by - pxs(6) - resh + pxs(2), w8(S.job_result), S.job_failed ? C_NG : C_TEXT, 1);
-        skin_button(G, bx, by, bw, ch, T("btn_close"), 0, S.job_running, 1, !S.job_running); if (!S.job_running) hot_add(bx, by, bw, ch, A_DLG_CLOSE, 0);
-        bx -= bw + pxs(8);
-        if (S.job_running) { skin_button(G, bx, by, bw, ch, T("btn_cancel_c"), 0, S.job_committed, 0, 0); if (!S.job_committed) hot_add(bx, by, bw, ch, A_DLG_CANCEL, 1); }
+        txt(x, y, w8(S.dlg_title), W2K_TEXT, 1); y += th() + w2k_px(8);
+        txt(x, y, w8(S.job_phase), W2K_TEXT, 0); y += th() + w2k_px(6);
+        w2k_draw_progress(G, x, y, w, w2k_px(18), S.job_pct); y += w2k_px(18) + w2k_px(6);
+        txt(x, y, w8(S.job_counts), W2K_TEXT_DIM, 0); y += th() + 2;
+        G->clip(G->ctx, x, y, w, th() + 2); txt(x, y, w8(S.job_current), W2K_TEXT_DIM, 0); G->clip(G->ctx, 0, 0, 0, 0); y += th() + w2k_px(8);
+        int resh = S.job_result[0] ? th() + w2k_px(6) : 0;
+        paint_text_area(x, y, w, by - w2k_px(10) - resh - y, &S.job_log, &S.dlg_scroll, 1);
+        if (S.job_result[0]) txt(x, by - w2k_px(6) - resh + w2k_px(2), w8(S.job_result), S.job_failed ? W2K_NG : W2K_TEXT, 1);
+        w2k_button(G, &S.hot, bx, by, bw, ch, T("btn_close"), A_DLG_CLOSE, 0, W2K_DEFAULT | (S.job_running ? W2K_DISABLED : W2K_FOCUS));
+        bx -= bw + w2k_px(8);
+        if (S.job_running) w2k_button(G, &S.hot, bx, by, bw, ch, T("btn_cancel_c"), A_DLG_CANCEL, 1, S.job_committed ? W2K_DISABLED : 0);
     } else {
-        for (int i = 0; i < S.dlg_lines.n; i++) { int h = draw_wrapped(x, y, w, w8(S.dlg_lines.v[i].text), C_TEXT, 0); y += h + 1; }
-        skin_button(G, dx + (dw - bw) / 2, by, bw, ch, L"OK", 0, 0, 1, 1); hot_add(dx + (dw - bw) / 2, by, bw, ch, A_DLG_OK, 0);
+        for (int i = 0; i < S.dlg_lines.n; i++) { int h = draw_wrapped(x, y, w, w8(S.dlg_lines.v[i].text), W2K_TEXT, 0); y += h + 1; }
+        w2k_button(G, &S.hot, dx + (dw - bw) / 2, by, bw, ch, L"OK", A_DLG_OK, 0, W2K_DEFAULT | W2K_FOCUS);
     }
     hot_add(0, 0, W, H, A_NONE, -2);                  /* modal: swallow everything else */
 }
@@ -652,76 +559,45 @@ static void paint_modal(int W, int H) {
 const char *app_caption_text(void) { static char b[96]; snprintf(b, sizeof b, "AFVI TOOLS %s", S.version); return b; }
 
 /* ---- page painting ------------------------------------------------------------------------------ */
-void app_paint(gfx_t *g, int W, int H) {
-    G = g; S.W = W; S.H = H; S.nhot = 0;
-    fillr(0, 0, W, H, C_FACE);
-    int y = 0, m = pxs(4);
+void app_paint(w2k_gfx *g, int W, int H) {
+    G = g; S.W = W; S.H = H; w2k_hot_reset(&S.hot);
+    fillr(0, 0, W, H, W2K_FACE);
+    int y = 0, m = w2k_px(4);
     if (S.frameless) {
-        skin_edge(G, 0, 0, W, H, SKE_WINDOW);
-        int capH = th() + pxs(6), bs = capH - 4;
-        skin_caption(G, 3, 3, W - 6, capH, w8(app_caption_text()), 1);
-        for (int i = 0; i < 3; i++) { int bx = W - 3 - 2 - (3 - i) * (bs + (i == 2 ? 0 : 0)) - (i == 2 ? 0 : 0) + (i == 2 ? 0 : 0); (void)bx; }
-        int x = W - 5 - bs;
-        for (int i = 2; i >= 0; i--) { skin_caption_button(G, x, 5, bs, bs - 0, i, S.pressed_hot == A_CAP * 10 + i); hot_add(x, 5, bs, bs, A_CAP, i); x -= bs + (i == 2 ? pxs(2) : 0); }
-        y = 3 + capH;
+        y = w2k_window_caption(G, &S.hot, W, H, w8(app_caption_text()), A_CAP, S.pressed_hot);
     }
     /* menu bar */
-    int mh = th() + pxs(6), x = m + 2;
-    static const char *mk[4] = {"menu_file", "menu_view", "menu_tools", "menu_help"};
-    for (int i = 0; i < 4; i++) {
-        const wchar_t *s = T(mk[i]); int w = tw(s, 0) + pxs(16);
-        int open = S.popup == P_MENU && S.popup_arg == i;
-        if (open) fillr(x, y + 1, w, mh - 2, C_SELECT);
-        txt(x + pxs(8), y + (mh - th()) / 2, s, open ? 0xFFFFFF : C_TEXT, 0);
-        hot_add(x, y, w, mh, A_MENU, i);
-        x += w;
-    }
-    y += mh + pxs(2);
-    /* tabs */
-    int tabH = th() + pxs(10), tx = m + 10;
+    int mh = th() + w2k_px(6);
+    const wchar_t *ml[4] = {T("menu_file"), T("menu_view"), T("menu_tools"), T("menu_help")};
+    w2k_menubar(G, &S.hot, m + 2, y, mh, ml, 4, S.popup == P_MENU ? S.popup_arg : -1, A_MENU);
+    y += mh + w2k_px(2);
+    /* tabs and the page frame */
+    int tabH = th() + w2k_px(10);
     const wchar_t *tl[2] = {T("tab_copy"), T("tab_export")};
-    int tabw[2], tabx[2];
-    for (int i = 0; i < 2; i++) { tabw[i] = tw(tl[i], 0) + pxs(24); tabx[i] = tx; tx += tabw[i] + 2; }
-    int pageTop = y + tabH;
-    int sbH = pxs(24), pageBot = H - sbH - 2 - (S.frameless ? 3 : 0);
+    int sbH = w2k_px(24), pageBot = H - sbH - 2 - (S.frameless ? 3 : 0);
     int pw = W - 2 * m - (S.frameless ? 6 : 0), px0 = m + (S.frameless ? 3 : 0);
-    fillr(px0, pageTop, pw, pageBot - pageTop, C_FACE);
-    skin_edge(G, px0, pageTop, pw, pageBot - pageTop, SKE_WINDOW);
-    for (int i = 0; i < 2; i++) if (i != S.page) { skin_tab(G, tabx[i], y + 2, tabw[i], tabH - 2, tl[i], 0); hot_add(tabx[i], y + 2, tabw[i], tabH - 2, A_TAB0 + i, 0); }
-    skin_tab(G, tabx[S.page], y + 2, tabw[S.page], tabH - 2, tl[S.page], 1);
-    fillr(tabx[S.page] - 1, pageTop, tabw[S.page] + 2, 2, C_FACE);             /* the active tab merges with the page */
-    hot_add(tabx[S.page], y + 2, tabw[S.page], tabH - 2, A_TAB0 + S.page, 0);
-    int in = pxs(8);
+    int pageTop = w2k_tabsheet(G, &S.hot, m + 10, y, px0, pw, pageBot, tl, 2, S.page, A_TAB0);
+    (void)tabH;
+    int in = w2k_px(8);
     if (S.page == 0) paint_copy_page(px0 + in, pageTop + in, pw - 2 * in, pageBot - pageTop - 2 * in);
     else paint_export_page(px0 + in, pageTop + in, pw - 2 * in, pageBot - pageTop - 2 * in);
     /* status bar: 4 sunken panes, the first takes the rest, size grip */
-    int sy = H - sbH - (S.frameless ? 3 : 0), gap = 2;
+    int sy = H - sbH - (S.frameless ? 3 : 0);
     const wchar_t *p1 = status_text(), *p2 = w8(S.path);
     wchar_t cnt[96];
     { char a[16], b[16]; snprintf(a, sizeof a, "%d", S.nvis); snprintf(b, sizeof b, "%d", S.nrows); const char *args[2] = {a, b};
       char *q = edit_utf8(EDIT_SEARCH); int filt = q[0]; free(q);
       wcsncpy(cnt, TF(filt ? "count_filtered" : "count_models", filt ? 2 : 1, filt ? args : &args[1]), 95); cnt[95] = 0; }
     const wchar_t *p4 = S.read_only ? T(S.lock_open ? "lock_open" : "lock_locked") : T("lock_writable");
-    int w2 = tw(p2, 0) + pxs(16), w3 = tw(cnt, 0) + pxs(16), w4 = tw(p4, 0) + pxs(16), grip = pxs(14);
-    int w1 = pw - w2 - w3 - w4 - 3 * gap - grip; if (w1 < 0) w1 = 0;
-    int sx = px0;
-    skin_pane(G, sx, sy + 2, w1, sbH - 4, p1, 1); sx += w1 + gap;
-    skin_pane(G, sx, sy + 2, w2, sbH - 4, p2, 1); sx += w2 + gap;
-    skin_pane(G, sx, sy + 2, w3, sbH - 4, cnt, 1); sx += w3 + gap;
-    skin_pane(G, sx, sy + 2, w4, sbH - 4, p4, 1);
-    for (int i = 0; i < 3; i++) { int o = i * 4; fillr(px0 + pw - grip + 2 + o, sy + sbH - 4, 10 - o, 1, C_SHADOW); fillr(px0 + pw - grip + 3 + o, sy + sbH - 3, 10 - o, 1, C_HIGHLIGHT); }
+    const wchar_t *panes[4] = {p1, p2, cnt, p4};
+    w2k_statusbar(G, px0, sy, pw, sbH, panes, 4);
     if (S.popup != P_NONE) paint_popup(W, H);
     if (S.modal != M_NONE) { S.h->edit_place(EDIT_SEARCH, 0, 0, 0, 0, 0); S.h->edit_place(EDIT_COPYNAME, 0, 0, 0, 0, 0); S.h->edit_place(EDIT_RENAME, 0, 0, 0, 0, 0); paint_modal(W, H); }
 }
 
 /* ---- input ------------------------------------------------------------------------------------------------- */
-static int page_rows(void) { int rh = th() + 3, hh = th() + pxs(6); int h = S.H - pxs(300); (void)hh; return h / rh > 5 ? h / rh : 5; }
-static void select_vis(int i) {
-    if (i < 0) i = 0;
-    if (i >= S.nvis) i = S.nvis - 1;
-    S.sel_vis = i;
-    int page = page_rows(); if (i < S.scroll) S.scroll = i; if (i >= S.scroll + page) S.scroll = i - page + 1;
-}
+static int page_rows(void) { int rh = th() + 3, hh = th() + w2k_px(6); int h = S.H - w2k_px(300); (void)hh; return h / rh > 5 ? h / rh : 5; }
+static void select_vis(int i) { w2k_list_select(&S.sel_vis, &S.scroll, S.nvis, i, page_rows()); }
 
 static void do_menu_code(int code) {
     if (code == MC_REFRESH) { refresh_edit(EDIT_SEARCH); do_reload(); }
@@ -733,7 +609,7 @@ static void do_menu_code(int code) {
 }
 
 static void perform(int hi) {
-    Hot hot = S.hot[hi]; int act = hot.act, arg = hot.arg;
+    w2k_hot hot = S.hot.v[hi]; int act = hot.act, arg = hot.arg;
     switch (act) {
     case A_TAB0: S.page = 0; break;
     case A_TAB1: S.page = 1; break;
@@ -768,10 +644,7 @@ static void perform(int hi) {
     }
 }
 
-static int hit(int x, int y) {
-    for (int i = S.nhot - 1; i >= 0; i--) { Hot *t = &S.hot[i]; if (x >= t->x && x < t->x + t->w && y >= t->y && y < t->y + t->h) return i; }
-    return -1;
-}
+static int hit(int x, int y) { return w2k_hot_at(&S.hot, x, y); }
 static int down_hot = -1, down_act = 0;
 
 void app_mouse(int kind, int x, int y) {
@@ -779,7 +652,7 @@ void app_mouse(int kind, int x, int y) {
     if (kind == 0) {
         down_hot = i; S.pressed_hot = 0;
         if (i < 0) return;
-        Hot *t = &S.hot[i]; down_act = t->act;
+        w2k_hot *t = &S.hot.v[i]; down_act = t->act;
         if (t->act == A_ROW) { select_vis(t->arg); S.h->invalidate(); down_hot = -1; return; }
         if (t->act == A_SCROLL && t->arg == 0) { int page = page_rows(); S.scroll += (y < t->y + t->h / 2) ? -page : page; S.h->invalidate(); down_hot = -1; return; }
         if (t->act == A_REFRESH || t->act == A_COPY || t->act == A_RENAME || t->act == A_EXPORT) S.pressed_hot = t->act;
@@ -787,7 +660,7 @@ void app_mouse(int kind, int x, int y) {
         S.h->invalidate();
     } else if (kind == 1) {
         int d = down_hot; S.pressed_hot = 0; down_hot = -1;
-        if (d >= 0 && d < S.nhot && i >= 0 && i == d) perform(d);
+        if (d >= 0 && d < S.hot.n && i >= 0 && i == d) perform(d);
         S.h->invalidate();
     }
 }
@@ -819,14 +692,14 @@ void app_edit_changed(int e) { refresh_edit(e); if (e == EDIT_SEARCH) apply_filt
 
 int app_hit_caption(int x, int y) {
     if (!S.frameless) return 0;
-    int capH = th() + pxs(6);
+    int capH = th() + w2k_px(6);
     if (y < 3 || y >= 3 + capH) return 0;
-    for (int i = 0; i < S.nhot; i++) if (S.hot[i].act == A_CAP && x >= S.hot[i].x && x < S.hot[i].x + S.hot[i].w) return 0;
+    for (int i = 0; i < S.hot.n; i++) if (S.hot.v[i].act == A_CAP && x >= S.hot.v[i].x && x < S.hot.v[i].x + S.hot.v[i].w) return 0;
     return 1;
 }
 
-void app_set_lang(const char *tag) { i18n_set(tag); S.h->set_font(i18n_font_face(), skin_font_px); S.h->invalidate(); }
-void app_set_font(int px) { if (px < 10) px = 10; if (px > 28) px = 28; skin_font_px = px; S.h->set_font(i18n_font_face(), px); S.h->invalidate(); }
+void app_set_lang(const char *tag) { i18n_set(tag); S.h->set_font(i18n_font_face(), w2k_font_px); S.h->invalidate(); }
+void app_set_font(int px) { if (px < 10) px = 10; if (px > 28) px = 28; w2k_font_px = px; S.h->set_font(i18n_font_face(), px); S.h->invalidate(); }
 
 /* ---- self-test: drives the same actions a user would, then verifies the files through the core ------------- */
 static int st_fail(const char *msg) { snprintf(S.st_msg, sizeof S.st_msg, "%.250s", msg); return 1; }
@@ -872,7 +745,7 @@ static void selftest_tick(void) {
         if (r < 0 || t < 0) { st_fail("m1 or target missing"); st_finish(1); return; }
         select_vis(r); S.tsingle = t; S.mode_group = 0; do_copy(); S.st_step = 4; S.st_wait = 0; break; }
     case 4: if (S.modal == M_PLAN) {
-            int red = 0; for (int i = 0; i < S.dlg_lines.n; i++) if (S.dlg_lines.v[i].color == C_NG) red = 1;
+            int red = 0; for (int i = 0; i < S.dlg_lines.n; i++) if (S.dlg_lines.v[i].color == W2K_NG) red = 1;
             if (!red || !S.dlg_can_run) { st_fail("plan has no red deletion step"); st_finish(1); return; }
             start_job(); S.st_step = 5; S.st_wait = 0; } break;
     case 5: if (S.modal == M_JOB && S.job_done) {
@@ -905,10 +778,10 @@ void app_tick(void) {
 void app_enable_selftest(const char *dir) { S.st_active = 1; cpy(S.st_dir, sizeof S.st_dir, dir); S.h->set_timer(100); }
 
 void app_init(host_t *h, int frameless, const char *lang, int font_px) {
-    S.h = h; S.frameless = frameless; skin_font_px = font_px; S.sel_vis = -1;
+    S.h = h; S.frameless = frameless; w2k_font_px = font_px; S.sel_vis = -1;
     i18n_init(); i18n_set(lang);
     set_status("st_ready", 0, "", "", "");
-    h->set_font(i18n_font_face(), skin_font_px);
+    h->set_font(i18n_font_face(), w2k_font_px);
     h->call_async(cur_rid(RQ_HEALTH, 0), "Health", "{}");
     h->call_async(cur_rid(RQ_CONFIG, 0), "GetConfig", "{}");
 }
@@ -920,8 +793,8 @@ void app_preview_state(int what) {
     switch (what) {
     case 1: select_vis(S.nvis > 1 ? 1 : 0); do_copy(); break;
     case 2: start_job(); break;
-    case 3: S.popup = P_MENU; S.popup_arg = 1; S.popup_x = pxs(60); S.popup_y = (S.frameless ? 3 + th() + pxs(6) : 0) + th() + pxs(6); break;
-    case 4: S.popup = P_COMBO; S.popup_arg = CB_NODE; S.popup_x = pxs(300); S.popup_y = pxs(150); S.popup_w = pxs(86); break;
+    case 3: S.popup = P_MENU; S.popup_arg = 1; S.popup_x = w2k_px(60); S.popup_y = (S.frameless ? 3 + th() + w2k_px(6) : 0) + th() + w2k_px(6); break;
+    case 4: S.popup = P_COMBO; S.popup_arg = CB_NODE; S.popup_x = w2k_px(300); S.popup_y = w2k_px(150); S.popup_w = w2k_px(86); break;
     case 5: select_vis(0); S.h->edit_set(EDIT_RENAME, L"bad/name"); refresh_edit(EDIT_RENAME); do_rename(); break;
     case 6: S.modal = M_NONE; S.popup = P_NONE; break;
     case 7: do_export(); break;

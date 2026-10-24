@@ -1,6 +1,6 @@
 # Extracting the Windows 2000 controls into a component library
 
-Status: not done; this is the method. Why: the drawn controls (`gui/skin.c`, parts of `gui/app.c`, about 1,100 lines) are the part of this project that other tools
+Status: **steps 1 to 3 done (2026-10-24): `libw2k/`**, see `libw2k/README.md` for what is in it and what stayed in the application. The text below is the original plan; the layers are named as built (`w2k_draw.c`, `w2k_ctl.c`, `w2k_gdi.c`, `w2k_png.c`). Why: the drawn controls (`gui/skin.c`, parts of `gui/app.c`, about 1,100 lines) are the part of this project that other tools
 of the same family (for example the future Export Data To Excel screens) would reuse, and they are the part that is expensive to rewrite.
 
 ## Existing open source (checked 2026-10-24, only by search)

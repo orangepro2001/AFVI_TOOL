@@ -17,10 +17,11 @@ echo "== Go core (cgo, mingw)"
 
 echo "== GUI objects"
 python3 gui/gen_lang.py gui/lang gui/lang_data.c
-CF="-O2 -Wall -Wno-unused-function -municode -Igui"
-for f in win_main app skin i18n util lang_data third_party/cJSON; do $CC -c $CF gui/$f.c -o $OBJ/$(basename $f).o; done
+CF="-O2 -Wall -Wno-unused-function -municode -Igui -Ilibw2k"
+for f in win_main app i18n util lang_data third_party/cJSON; do $CC -c $CF gui/$f.c -o $OBJ/$(basename $f).o; done
+for f in w2k_draw w2k_ctl w2k_gdi; do $CC -c $CF libw2k/$f.c -o $OBJ/$f.o; done
 x86_64-w64-mingw32-windres gui/app.rc -o $OBJ/app_rc.o
-OBJS="$OBJ/win_main.o $OBJ/app.o $OBJ/skin.o $OBJ/i18n.o $OBJ/util.o $OBJ/lang_data.o $OBJ/cJSON.o $OBJ/app_rc.o"
+OBJS="$OBJ/win_main.o $OBJ/app.o $OBJ/w2k_draw.o $OBJ/w2k_ctl.o $OBJ/w2k_gdi.o $OBJ/i18n.o $OBJ/util.o $OBJ/lang_data.o $OBJ/cJSON.o $OBJ/app_rc.o"
 SYS="-lgdi32 -luser32 -lkernel32 -lshell32 -lole32"
 
 echo "== link: dynamic (afvi-core.dll beside the exe)"

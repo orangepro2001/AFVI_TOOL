@@ -67,6 +67,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc zlib1g-dev python3 fonts-dejavu-core fonts-noto-cjk
       - name: scripted UI journey and snapshot comparison
         run: scripts/test-gui.sh
+      - name: libw2k control library tests
+        run: libw2k/tests/run.sh
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

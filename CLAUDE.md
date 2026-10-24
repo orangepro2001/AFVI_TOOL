@@ -10,7 +10,7 @@ core behind a C ABI, cross-built from Linux with mingw-w64. User-facing docs are
   `allowNetworkWrite`); do not bypass it, do not pass `-allow-network-write`.
 - No commit/push unless asked. Remote `git@github.com:orangepro2001/AFVI_TOOL.git` is configured, nothing pushed. Commits need an identity: use `git -c user.name=tony -c user.email=yangziyi0801@gmail.com` (none is configured).
 - `.local-mirror/` holds copies of customer data: git-ignored, never commit it.
-- The look is the Windows 2000 style of the `win2000-style` skill (tokens in `gui/skin.c`): no rounded corners (radio buttons excepted), shadows or hover effects. Native OS controls cannot give this look
+- The look is the Windows 2000 style of the `win2000-style` skill (tokens in `libw2k/w2k.h`, drawing in `libw2k/w2k_draw.c`): no rounded corners (radio buttons excepted), shadows or hover effects. Native OS controls cannot give this look
   on Windows 8+; everything is drawn. Verify with a rendered image, not by reading code.
 - Nothing here has been run under Wine; the user ran the Windows exe and reported it works. Do not claim Windows behaviour you have not seen.
 
@@ -26,7 +26,7 @@ command gofmt -l core                    # `gofmt` may be aliased to a rewriting
 
 ## Where things are
 
-README.md (layout), docs/ARCHITECTURE.md (C ABI, process model), docs/NAMING.md (what a model is on the machines), docs/LINUX_TESTING.md, docs/COMPONENT_LIBRARY.md (plan to extract the controls),
+README.md (layout), docs/ARCHITECTURE.md (C ABI, process model), docs/NAMING.md (what a model is on the machines), docs/LINUX_TESTING.md, libw2k/README.md + docs/COMPONENT_LIBRARY.md (the extracted control library; `libw2k/tests/run.sh` tests it alone),
 docs/STACK_COMPARISON.md and docs/validation/ (the five front ends tried; Avalonia is tag `v0.1.0-avalonia`).
 Copy/rename rules: `core/internal/policy` only. Languages: default Korean; core packs `core/internal/i18n/catalog.go`, GUI packs `gui/lang/*.json` (flat key -> text, `{0}` placeholders, same keys in all four; embedded by `gui/gen_lang.py`).
 `core/internal/wailsapp` is the UI-independent facade (name is historical) used by `capi`.

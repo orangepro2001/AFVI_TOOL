@@ -2,7 +2,7 @@
  * Windows, preview_main.c on Linux) provides the window, the native EDIT fields, timers and the calls into the core. */
 #ifndef APP_H
 #define APP_H
-#include "gfx.h"
+#include "w2k_gfx.h"
 #include <stdint.h>
 
 enum { EDIT_SEARCH, EDIT_COPYNAME, EDIT_RENAME, EDIT_COUNT };
@@ -21,7 +21,7 @@ typedef struct host {
 } host_t;
 
 void app_init(host_t *h, int frameless, const char *lang, int font_px);
-void app_paint(gfx_t *g, int w, int h);
+void app_paint(w2k_gfx *g, int w, int h);
 void app_mouse(int kind, int x, int y);             /* 0 down 1 up 2 move */
 void app_wheel(int x, int y, int delta);
 void app_key(int vk);                               /* Windows virtual-key codes */

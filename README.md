@@ -43,7 +43,8 @@ scripts/win32.sh               # 只构建应用:动态/静态两种链接,并�
 ```
 core/    Go 核心:vfs(只读保护、只读 SMB)、model、policy、machine、ops(计划/执行/回滚)、i18n、service、capi(C 接口的纯 Go 部分)
          cmd/afvi-core-dll   cgo 导出 afvi_*(c-shared 与 c-archive)    cmd/afvi-core + internal/server  可选的回环 HTTP 传输
-gui/     C 界面:app.c(应用)、skin.c(Windows 2000 皮肤)、gfx.h(绘制接口)、win_main.c(Win32 宿主)、preview/(Linux 预览渲染)、lang/*.json(四种语言)
+libw2k/  Windows 2000 控件库(C99):w2k.h/w2k_draw.c(皮肤与基础绘制)、w2k_ctl.c(按钮、列表、菜单、页签等控件)、w2k_gfx.h(绘制接口)、w2k_gdi.c(Windows 后端)、w2k_png.c(Linux 后端)、demo/ 与 tests/(演示与快照测试)
+gui/     C 界面:app.c(应用,调用 libw2k)、win_main.c(Win32 宿主)、preview/(Linux 测试宿主)、lang/*.json(四种语言)
 docs/    ARCHITECTURE、NAMING、LINUX_TESTING、COMPONENT_LIBRARY、STACK_COMPARISON、validation/(各方案验证报告)
 scripts/ build.sh  win32.sh  dev-local.sh
 ```

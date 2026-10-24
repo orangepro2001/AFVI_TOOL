@@ -25,7 +25,7 @@ echo "== go vet"
 if [ "$run_tests" = 1 ]; then echo "== go test"; (cd core && go test ./...); fi
 if [ "$go_only" = 1 ]; then echo "== OK (Go only)"; exit 0; fi
 
-if [ "$run_tests" = 1 ]; then echo "== GUI tests on Linux (scripted journey + snapshots)"; scripts/test-gui.sh; fi
+if [ "$run_tests" = 1 ]; then echo "== GUI tests on Linux (scripted journey + snapshots)"; scripts/test-gui.sh; echo "== libw2k tests"; libw2k/tests/run.sh; fi
 
 echo "== Windows app"
 scripts/win32.sh
