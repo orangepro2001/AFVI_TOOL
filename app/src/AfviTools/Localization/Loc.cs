@@ -125,6 +125,29 @@ public sealed class Loc : INotifyPropertyChanged
     public string Format(string key, params object?[] args) =>
         string.Format(CultureInfo.InvariantCulture, this[key], args);
 
+    /// <summary>
+    /// The text of a key as an observable: the current text on subscribe, then again after every language change.
+    /// Turned into a binding with <c>ToBinding()</c> this needs no reflection (Native AOT safe).
+    /// </summary>
+    public IObservable<string> Observe(string key) => new KeyObservable(this, key);
+
+    private sealed class KeyObservable(Loc loc, string key) : IObservable<string>
+    {
+        public IDisposable Subscribe(IObserver<string> observer)
+        {
+            void Push() => observer.OnNext(loc[key]);
+            loc.LanguageChanged += Push;
+            Push();
+            return new Unsub(() => loc.LanguageChanged -= Push);
+        }
+
+        private sealed class Unsub(Action undo) : IDisposable
+        {
+            private Action? _undo = undo;
+            public void Dispose() => Interlocked.Exchange(ref _undo, null)?.Invoke();
+        }
+    }
+
     /// <summary>Every key of the English pack (tests check that all packs have them).</summary>
     public IEnumerable<string> Keys => _packs["en"].Keys.Where(k => !k.StartsWith('_'));
 

@@ -25,13 +25,13 @@
                 AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
                 SelectionMode="Single" GridLinesVisibility="None" HeadersVisibility="Column">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="{loc:T col_model}" Binding="{Binding Name}" Width="*" MinWidth="160" />
-          <DataGridTextColumn Header="{loc:T col_class}" Binding="{Binding Class}" Width="60" Tag="60" />
-          <DataGridTextColumn Header="PxRepository" Binding="{Binding Repository}" Width="112" Tag="112" />
-          <DataGridTextColumn Header=".his" Binding="{Binding History}" Width="50" Tag="50" />
-          <DataGridTextColumn Header="INSPECT_SPEC" Binding="{Binding Inspect}" Width="124" Tag="124" />
-          <DataGridTextColumn Header="LIGHT_SPEC" Binding="{Binding Light}" Width="104" Tag="104" />
-          <DataGridTextColumn Header="{loc:T col_modified}" Binding="{Binding Modified}" Width="154" Tag="154" />
+          <DataGridTextColumn x:DataType="vm:ModelRow" Header="{loc:T col_model}" Binding="{Binding Name}" Width="*" MinWidth="160" />
+          <DataGridTextColumn x:DataType="vm:ModelRow" Header="{loc:T col_class}" Binding="{Binding Class}" Width="60" Tag="60" />
+          <DataGridTextColumn x:DataType="vm:ModelRow" Header="PxRepository" Binding="{Binding Repository}" Width="112" Tag="112" />
+          <DataGridTextColumn x:DataType="vm:ModelRow" Header=".his" Binding="{Binding History}" Width="50" Tag="50" />
+          <DataGridTextColumn x:DataType="vm:ModelRow" Header="INSPECT_SPEC" Binding="{Binding Inspect}" Width="124" Tag="124" />
+          <DataGridTextColumn x:DataType="vm:ModelRow" Header="LIGHT_SPEC" Binding="{Binding Light}" Width="104" Tag="104" />
+          <DataGridTextColumn x:DataType="vm:ModelRow" Header="{loc:T col_modified}" Binding="{Binding Modified}" Width="154" Tag="154" />
         </DataGrid.Columns>
       </DataGrid>
     </Grid>

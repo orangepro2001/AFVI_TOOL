@@ -1,10 +1,15 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using AfviTools.Localization;
 using AfviTools.Models;
 
 namespace AfviTools.ViewModels;
 
-/// <summary>One line of the model list.</summary>
+/// <summary>
+/// One line of the model list. The DataGrid sorts columns through property-path reflection, so the properties are
+/// kept for trimming and Native AOT (without this, header sorting silently does nothing in an AOT build).
+/// </summary>
+[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
 public sealed class ModelRow
 {
     public ModelRow(ModelRowDto d)
