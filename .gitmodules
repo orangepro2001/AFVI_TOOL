@@ -1,0 +1,3 @@
+[submodule "libw2k"]
+	path = libw2k
+	url = git@github.com:orangepro2001/libw2k.git

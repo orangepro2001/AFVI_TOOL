@@ -9,6 +9,7 @@ core behind a C ABI, cross-built from Linux with mingw-w64. User-facing docs are
   Test copies on `LOCAL TEST` (`scripts/dev-local.sh`) or temp dirs. The vfs layer enforces it (`vfs.Open` returns read-only file systems for network paths unless
   `allowNetworkWrite`); do not bypass it, do not pass `-allow-network-write`.
 - No commit/push unless asked. Remote `git@github.com:orangepro2001/AFVI_TOOL.git` is configured, nothing pushed. Commits need an identity: use `git -c user.name=tony -c user.email=yangziyi0801@gmail.com` (none is configured).
+- `libw2k/` is a **git submodule** (own repository, local copy `/home/tony/dev/libw2k`, declared remote `git@github.com:orangepro2001/libw2k.git`, not pushed yet; this clone overrides the URL with `git config submodule.libw2k.url <local path>`). Library changes are committed in the library repo first, then the new submodule commit here. After a fresh clone: `git submodule update --init`.
 - `.local-mirror/` holds copies of customer data: git-ignored, never commit it.
 - The look is the Windows 2000 style of the `win2000-style` skill (tokens in `libw2k/w2k.h`, drawing in `libw2k/w2k_draw.c`): no rounded corners (radio buttons excepted), shadows or hover effects. Native OS controls cannot give this look
   on Windows 8+; everything is drawn. Verify with a rendered image, not by reading code.

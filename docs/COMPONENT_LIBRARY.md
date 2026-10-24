@@ -35,3 +35,6 @@ Rule: layers 1 and 2 never include `<windows.h>`; that is what makes Linux testi
 ## Effort and open decisions
 
 About 2 to 3 days for steps 1 to 3. Decide: separate repository or `libw2k/` here; licence; whether to offer a C++ wrapper; whether to include the dark theme.
+
+
+**Repository:** independent since 2026-10-24; this project uses it as the git submodule `libw2k/`. Licence still undecided.
