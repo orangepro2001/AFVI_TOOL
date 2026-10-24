@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# MSVC "link @file.rsp" shim: translate to `zig cc -target x86_64-windows-gnu` (lld-link underneath).
+Z=$HOME/.local/share/zig/zig-x86_64-linux-0.17.0/zig
+rsp="${1#@}"; rsp="${rsp//\"/}"
+args=(); libs=(); 
+while IFS= read -r tok; do
+  t="${tok//\"/}"; [ -z "$t" ] && continue
+  case "$t" in
+    /OUT:*) args+=(-o "${t#/OUT:}");;
+    /DEF:*|/MERGE:*|/OPT:*) ;;
+    /SUBSYSTEM:*) args+=("-Wl,--subsystem,$(echo ${t#/SUBSYSTEM:} | tr A-Z a-z)");;
+    /ENTRY:*) args+=("-Wl,--entry,${t#/ENTRY:}");;
+    /STACK:*) args+=("-Wl,--stack,${t#/STACK:}");;
+            /NOLOGO|/MANIFEST:NO|/INCREMENTAL:NO|/NOEXP|/NOIMPLIB|/CETCOMPAT|/IGNORE:*|/NATVIS:*|/NODEFAULTLIB:*|/DEFAULTLIB:*) ;;
+    *.lib) case "$(basename "$t")" in kernel32.lib|advapi32.lib|bcrypt.lib|crypt32.lib|iphlpapi.lib|mswsock.lib|ncrypt.lib|normaliz.lib|ntdll.lib|ole32.lib|oleaut32.lib|secur32.lib|user32.lib|version.lib|ws2_32.lib) b=$(basename "$t" .lib); libs+=("-l$b");; *) args+=("$t");; esac;;
+    *) args+=("$t");;
+  esac
+done < <(sed '1s/^\xEF\xBB\xBF//' "$rsp" | tr ' ' '\n')
+exec "$Z" cc -target x86_64-windows-gnu -nostartfiles -L/tmp/aotx/stubs /tmp/aotx/stubs/msvcabi.o "${args[@]}" "${libs[@]}" -lkernel32 -lntdll -Wl,--gc-sections ${LINK_EXTRA:-} 2>&1
