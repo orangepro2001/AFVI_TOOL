@@ -58,7 +58,8 @@ static int load_font(const char *path, int index, int px_size) {
     return 1;
 }
 
-/* ---- PNG (stored deflate blocks) --------------------------------------------------------------------------- */
+/* ---- PNG (zlib-compressed, filter 0: only our own files are ever read back) ---------------------------------- */
+#include <zlib.h>
 static uint32_t crc_table[256];
 static uint32_t crc(uint32_t c, const uint8_t *p, size_t n) { for (size_t i = 0; i < n; i++) c = crc_table[(c ^ p[i]) & 255] ^ (c >> 8); return c; }
 static void be32(uint8_t *p, uint32_t v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v >> 8; p[3] = v; }
@@ -67,18 +68,36 @@ static void chunk(FILE *f, const char *type, const uint8_t *d, uint32_t n) {
     if (n) fwrite(d, 1, n, f);
     uint32_t c = crc(0xFFFFFFFFu, (const uint8_t *)type, 4); c = crc(c, d, n) ^ 0xFFFFFFFFu; uint8_t t[4]; be32(t, c); fwrite(t, 1, 4, f);
 }
-static void write_png(const char *path) {
+static void write_rgb_png(const char *path, const uint8_t *rgb, int W, int H) {
     for (int i = 0; i < 256; i++) { uint32_t c = i; for (int k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320u ^ (c >> 1) : c >> 1; crc_table[i] = c; }
-    size_t rl = 1 + 3 * CW, n = rl * CH; uint8_t *raw = (uint8_t *)malloc(n);
-    for (int y = 0; y < CH; y++) { raw[y * rl] = 0; memcpy(raw + y * rl + 1, px + 3 * y * CW, 3 * CW); }
-    size_t blocks = (n + 65534) / 65535, zl = 2 + n + 5 * blocks + 4; uint8_t *z = (uint8_t *)malloc(zl); size_t o = 0;
-    z[o++] = 0x78; z[o++] = 0x01;
-    for (size_t b = 0, off = 0; b < blocks; b++) { size_t len = n - off > 65535 ? 65535 : n - off; z[o++] = (b == blocks - 1); z[o++] = len & 255; z[o++] = len >> 8; z[o++] = ~len & 255; z[o++] = (~len >> 8) & 255; memcpy(z + o, raw + off, len); o += len; off += len; }
-    uint32_t a = 1, bsum = 0; for (size_t i = 0; i < n; i++) { a = (a + raw[i]) % 65521; bsum = (bsum + a) % 65521; }
-    be32(z + o, (bsum << 16) | a); o += 4;
-    FILE *f = fopen(path, "wb"); fwrite("\x89PNG\r\n\x1a\n", 1, 8, f);
-    uint8_t ih[13]; be32(ih, CW); be32(ih + 4, CH); ih[8] = 8; ih[9] = 2; ih[10] = ih[11] = ih[12] = 0; chunk(f, "IHDR", ih, 13);
-    chunk(f, "IDAT", z, (uint32_t)o); chunk(f, "IEND", NULL, 0); fclose(f); free(raw); free(z);
+    size_t rl = 1 + 3 * (size_t)W, n = rl * H; uint8_t *raw = (uint8_t *)malloc(n);
+    for (int y = 0; y < H; y++) { raw[y * rl] = 0; memcpy(raw + y * rl + 1, rgb + 3 * (size_t)y * W, 3 * (size_t)W); }
+    uLongf zl = compressBound((uLong)n); uint8_t *z = (uint8_t *)malloc(zl);
+    if (compress2(z, &zl, raw, (uLong)n, 9) != Z_OK) { fprintf(stderr, "zlib failed\n"); exit(1); }
+    FILE *f = fopen(path, "wb"); if (!f) { fprintf(stderr, "cannot write %s\n", path); exit(1); }
+    fwrite("\x89PNG\r\n\x1a\n", 1, 8, f);
+    uint8_t ih[13]; be32(ih, W); be32(ih + 4, H); ih[8] = 8; ih[9] = 2; ih[10] = ih[11] = ih[12] = 0; chunk(f, "IHDR", ih, 13);
+    chunk(f, "IDAT", z, (uint32_t)zl); chunk(f, "IEND", NULL, 0); fclose(f); free(raw); free(z);
+}
+static void write_png(const char *path) { write_rgb_png(path, px, CW, CH); }
+/* returns malloc'ed RGB or NULL; only reads PNGs written above */
+static uint8_t *read_rgb_png(const char *path, int *W, int *H) {
+    FILE *f = fopen(path, "rb"); if (!f) return NULL;
+    fseek(f, 0, SEEK_END); long n = ftell(f); fseek(f, 0, SEEK_SET); uint8_t *d = (uint8_t *)malloc(n);
+    if (fread(d, 1, n, f) != (size_t)n) { fclose(f); free(d); return NULL; } fclose(f);
+    uint8_t *idat = (uint8_t *)malloc(n); size_t il = 0; long o = 8; int w = 0, h = 0;
+    while (o + 12 <= n) {
+        uint32_t len = ((uint32_t)d[o] << 24) | (d[o + 1] << 16) | (d[o + 2] << 8) | d[o + 3];
+        if (!memcmp(d + o + 4, "IHDR", 4)) { w = (int)(((uint32_t)d[o + 8] << 24) | (d[o + 9] << 16) | (d[o + 10] << 8) | d[o + 11]); h = (int)(((uint32_t)d[o + 12] << 24) | (d[o + 13] << 16) | (d[o + 14] << 8) | d[o + 15]); }
+        else if (!memcmp(d + o + 4, "IDAT", 4)) { memcpy(idat + il, d + o + 8, len); il += len; }
+        o += 12 + len;
+    }
+    free(d); if (w <= 0 || h <= 0) { free(idat); return NULL; }
+    size_t rl = 1 + 3 * (size_t)w; uLongf rawl = rl * h; uint8_t *raw = (uint8_t *)malloc(rawl);
+    if (uncompress(raw, &rawl, idat, (uLong)il) != Z_OK || rawl != rl * h) { free(idat); free(raw); return NULL; }
+    free(idat); uint8_t *rgb = (uint8_t *)malloc(3 * (size_t)w * h);
+    for (int y = 0; y < h; y++) { if (raw[y * rl] != 0) { free(raw); free(rgb); return NULL; } memcpy(rgb + 3 * (size_t)y * w, raw + y * rl + 1, 3 * (size_t)w); }
+    free(raw); *W = w; *H = h; return rgb;
 }
 
 /* ---- host: the real core, answered synchronously ------------------------------------------------------------ */
@@ -105,13 +124,12 @@ static void render(const char *path, int W, int H) {
     printf("wrote %s\n", path);
 }
 
-int main(int argc, char **argv) {
-    const char *dir = argc > 1 ? argv[1] : "shots", *work = argc > 2 ? argv[2] : "/tmp/afvi-preview";
-    int frameless = argc > 3 ? atoi(argv[3]) : 1, font_px = argc > 4 ? atoi(argv[4]) : 14;
-    char p[600]; snprintf(p, sizeof p, "mkdir -p %s", dir); (void)!system(p);
-    if (afvi_init(NULL, work, 0) != 0) { fprintf(stderr, "core init failed\n"); return 1; }
-    const char *latin = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", *cjk = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc";
-    struct { const char *tag; const char *font; int idx; } L[4] = {{"ko", cjk, 1}, {"zh-Hans", cjk, 2}, {"zh-Hant", cjk, 3}, {"en", latin, 0}};
+static const char *latin_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", *cjk_font = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc";
+
+/* every screen the snapshot tests cover: main window in four languages; plan, job, menu, combo, refusal in ko and en */
+static void render_all(const char *dir, int frameless, int font_px) {
+    char p[700];
+    struct { const char *tag; const char *font; int idx; } L[4] = {{"ko", cjk_font, 1}, {"zh-Hans", cjk_font, 2}, {"zh-Hant", cjk_font, 3}, {"en", latin_font, 0}};
     int W = 1100 * font_px / 14, H = 720 * font_px / 14;
     for (int li = 0; li < 4; li++) {
         g_font_path = L[li].font; g_font_index = L[li].idx;
@@ -130,5 +148,64 @@ int main(int argc, char **argv) {
             app_preview_state(6);
         }
     }
+}
+
+/* the app's own scripted journey (list, search, languages, copy with the red deletion step, group rename, refusal, Excel entry)
+ * against the real core; exit code 0 = passed */
+static int quit_code = -1;
+static void t_quit(int c) { quit_code = c; }
+static int run_selftest(const char *work) {
+    HOST.quit = t_quit;
+    if (afvi_init(NULL, work, 0) != 0) { fprintf(stderr, "core init failed\n"); return 2; }
+    g_font_path = latin_font; g_font_index = 0;
+    app_init(&HOST, 0, "en", 14); load_font(latin_font, 0, 14);
+    app_enable_selftest(work);
+    for (int i = 0; i < 3000 && quit_code < 0; i++) { app_tick(); usleep(10000); }
+    char p[700], line[400] = "no result"; snprintf(p, sizeof p, "%s/selftest-result.txt", work);
+    FILE *f = fopen(p, "r"); if (f) { if (!fgets(line, sizeof line, f)) strcpy(line, "empty result"); fclose(f); }
+    printf("%s", line); if (!strchr(line, '\n')) printf("\n");
+    return quit_code == 0 ? 0 : 1;
+}
+
+/* compare the freshly rendered PNGs with the committed baselines; tolerant of tiny anti-aliasing differences between font builds */
+static int check_snapshots(const char *base, const char *dir, int update) {
+    static const char *names[] = {"main-ko", "main-zh-Hans", "main-zh-Hant", "main-en", "plan-ko", "job-ko", "menu-ko", "combo-ko", "refused-ko",
+                                  "plan-en", "job-en", "menu-en", "combo-en", "refused-en"};
+    int bad = 0; char a[800], b[800];
+    snprintf(a, sizeof a, "mkdir -p '%s'", base); (void)!system(a);
+    for (size_t i = 0; i < sizeof names / sizeof *names; i++) {
+        snprintf(a, sizeof a, "%s/%s.png", dir, names[i]); snprintf(b, sizeof b, "%s/%s.png", base, names[i]);
+        if (update) { char cmd[1700]; snprintf(cmd, sizeof cmd, "cp '%s' '%s'", a, b); (void)!system(cmd); printf("updated %s\n", names[i]); continue; }
+        int w1, h1, w2, h2; uint8_t *x = read_rgb_png(a, &w1, &h1), *y = read_rgb_png(b, &w2, &h2);
+        if (!x || !y) { printf("FAIL %s: %s\n", names[i], !y ? "no baseline (run scripts/test-gui.sh --update)" : "cannot read the rendered image"); bad++; free(x); free(y); continue; }
+        if (w1 != w2 || h1 != h2) { printf("FAIL %s: size %dx%d, baseline %dx%d\n", names[i], w1, h1, w2, h2); bad++; free(x); free(y); continue; }
+        long diff = 0, total = (long)w1 * h1; uint8_t *dimg = (uint8_t *)malloc(3 * (size_t)total);
+        for (long k = 0; k < total; k++) {
+            int d = 0; for (int c = 0; c < 3; c++) { int e = abs((int)x[3 * k + c] - (int)y[3 * k + c]); if (e > d) d = e; }
+            if (d > 24) { diff++; dimg[3 * k] = 255; dimg[3 * k + 1] = 0; dimg[3 * k + 2] = 0; } else { dimg[3 * k] = dimg[3 * k + 1] = dimg[3 * k + 2] = (uint8_t)(y[3 * k] / 2 + 120); }
+        }
+        double pct = 100.0 * diff / total;
+        if (pct > 0.30) { char dp[800]; snprintf(dp, sizeof dp, "%s/%s.diff.png", dir, names[i]); write_rgb_png(dp, dimg, w1, h1); printf("FAIL %s: %.2f%% of the pixels differ (limit 0.30%%), see %s\n", names[i], pct, dp); bad++; }
+        else printf("ok   %s (%.3f%% differ)\n", names[i], pct);
+        free(dimg); free(x); free(y);
+    }
+    return bad ? 1 : 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc > 2 && !strcmp(argv[1], "--selftest")) return run_selftest(argv[2]);
+    if (argc > 3 && (!strcmp(argv[1], "--check") || !strcmp(argv[1], "--update"))) {
+        /* --check|--update <baseline dir> <work dir> */
+        const char *base = argv[2], *work = argv[3]; char dir[700];
+        snprintf(dir, sizeof dir, "%s/render", work); { char c[800]; snprintf(c, sizeof c, "mkdir -p '%s'", dir); (void)!system(c); }
+        if (afvi_init(NULL, work, 0) != 0) { fprintf(stderr, "core init failed\n"); return 2; }
+        render_all(dir, 1, 14);
+        return check_snapshots(base, dir, !strcmp(argv[1], "--update"));
+    }
+    const char *dir = argc > 1 ? argv[1] : "shots", *work = argc > 2 ? argv[2] : "/tmp/afvi-preview";
+    int frameless = argc > 3 ? atoi(argv[3]) : 1, font_px = argc > 4 ? atoi(argv[4]) : 14;
+    char p[600]; snprintf(p, sizeof p, "mkdir -p %s", dir); (void)!system(p);
+    if (afvi_init(NULL, work, 0) != 0) { fprintf(stderr, "core init failed\n"); return 1; }
+    render_all(dir, frameless, font_px);
     return 0;
 }

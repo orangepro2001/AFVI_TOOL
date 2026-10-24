@@ -18,7 +18,8 @@ core behind a C ABI, cross-built from Linux with mingw-w64. User-facing docs are
 
 ```bash
 scripts/build.sh [--no-test|--go-only]   # gofmt + vet + go test, then the Windows app -> build/native-win/AfviTools.exe (static) and dynamic/
-scripts/win32.sh                         # app only: both link modes, sizes and imports, plus the Linux PNG preview in shots/
+scripts/win32.sh                         # app only: both link modes, sizes and imports, plus the Linux PNG renders in shots/
+scripts/test-gui.sh [--update]           # GUI tests on Linux: scripted UI journey + snapshots in tests/snapshots (see docs/LINUX_TESTING.md)
 cd core && go test ./...                 # Go only (pure Go; cgo only in cmd/afvi-core-dll)
 command gofmt -l core                    # `gofmt` may be aliased to a rewriting tool in zsh
 ```

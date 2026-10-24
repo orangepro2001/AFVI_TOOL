@@ -2,6 +2,7 @@
 #
 #   core            Go: gofmt, vet, race tests (Linux)
 #   core-windows    Go tests on a real Windows runner
+#   gui-linux       the app itself on Linux: scripted UI journey + snapshot comparison (scripts/test-gui.sh)
 #   package-windows cross-builds the Windows app with mingw-w64 into build/native-win and uploads it
 #   smoke-windows   PLACEHOLDER (disabled): start the exe on windows-latest and run -selftest; enable once -selftest is verified on Windows
 #   deploy          PLACEHOLDER (disabled). See deploy/README.md.
@@ -53,8 +54,28 @@ jobs:
         working-directory: core
         run: go test ./...
 
+  gui-linux:
+    needs: core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - name: toolchain and fonts (the baselines use DejaVu Sans and Noto Sans CJK)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc zlib1g-dev python3 fonts-dejavu-core fonts-noto-cjk
+      - name: scripted UI journey and snapshot comparison
+        run: scripts/test-gui.sh
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: gui-snapshot-failures
+          path: shots/failed/*.png
+          if-no-files-found: ignore
+
   package-windows:
-    needs: [core, core-windows]
+    needs: [core, core-windows, gui-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,8 +89,6 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 python3 bc fonts-dejavu-core
       - name: build
         run: scripts/build.sh --no-test
-      - name: preview screenshots (Linux software renderer)
-        run: ls shots || true
       - uses: actions/upload-artifact@v4
         with:
           name: AFVI-TOOLS-win

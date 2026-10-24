@@ -2,7 +2,7 @@
 # One-click check and build of AFVI TOOLS (Windows only, cross-built from Linux).
 #
 #   scripts/build.sh             gofmt + vet + Go tests, then the Windows app into ./build/native-win
-#   scripts/build.sh --no-test   skip the Go tests
+#   scripts/build.sh --no-test   skip the tests (Go and the Linux GUI tests)
 #   scripts/build.sh --go-only   only the Go checks (no mingw needed)
 #
 # Needs: Go, and for the app x86_64-w64-mingw32-gcc (apt: gcc-mingw-w64-x86-64), python3, bc.
@@ -24,6 +24,8 @@ echo "== go vet"
 (cd core && go vet ./...)
 if [ "$run_tests" = 1 ]; then echo "== go test"; (cd core && go test ./...); fi
 if [ "$go_only" = 1 ]; then echo "== OK (Go only)"; exit 0; fi
+
+if [ "$run_tests" = 1 ]; then echo "== GUI tests on Linux (scripted journey + snapshots)"; scripts/test-gui.sh; fi
 
 echo "== Windows app"
 scripts/win32.sh

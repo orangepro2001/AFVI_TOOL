@@ -30,12 +30,8 @@ echo "== link: static (core archive linked into one exe)"
 $CC -s -mwindows -municode $OBJS $OUT/libafvi-core.a $SYS -lws2_32 -lwinmm -lntdll -lbcrypt -luserenv -o $OUT/afvi-static.exe
 $CC -s -mwindows -municode -static $OBJS $OUT/libafvi-core.a $SYS -lws2_32 -lwinmm -lntdll -lbcrypt -luserenv -o $OUT/afvi-static-full.exe
 
-echo "== Linux preview (the same app.c/skin.c rendered to PNG against the real core; this is how the look is reviewed without Windows)"
-( cd core && CGO_ENABLED=1 go build -buildmode=c-archive -trimpath -o ../$OUT/libafvi-core-linux.a ./cmd/afvi-core-dll )
-mkdir -p $OUT/obj_linux
-for f in app skin i18n util lang_data third_party/cJSON; do gcc -c -O2 -Wall -Wno-unused-function -Igui gui/$f.c -o $OUT/obj_linux/$(basename $f).o; done
-gcc -O2 -Igui gui/preview/preview_main.c $OUT/obj_linux/*.o $OUT/libafvi-core-linux.a -lpthread -lm -ldl -o $OUT/preview
-W=$(mktemp -d); mkdir -p shots && $OUT/preview shots "$W" 1 14 | tail -1
+echo "== Linux preview renders (shots/*.png, same app code, real core; see docs/LINUX_TESTING.md)"
+scripts/test-gui.sh --render shots
 
 echo "== deliverable: build/native-win (static one-file exe recommended; dynamic pair for reference)"
 D=build/native-win; mkdir -p $D/dynamic
